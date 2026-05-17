@@ -1,0 +1,140 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* No `inline` — we want utilities to compile to `var(--color-*)` references so the `.dark`
+   overrides below actually swap surfaces at runtime. With `inline`, Tailwind would bake the
+   literal light values into every utility class. */
+@theme {
+	--font-sans:
+		"Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", sans-serif;
+	--font-mono:
+		"JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+	/* Pinterest-inspired light: airy blue-gray bg, white cards, slate accent */
+	--color-background: oklch(0.969 0.005 247.86);
+	--color-foreground: oklch(0.18 0.025 252);
+	--color-card: oklch(1 0 0);
+	--color-card-foreground: oklch(0.18 0.025 252);
+	--color-popover: oklch(1 0 0);
+	--color-popover-foreground: oklch(0.18 0.025 252);
+	--color-primary: oklch(0.21 0.034 264);
+	--color-primary-foreground: oklch(0.985 0 0);
+	--color-secondary: oklch(0.96 0.005 247);
+	--color-secondary-foreground: oklch(0.21 0.034 264);
+	--color-muted: oklch(0.94 0.008 247);
+	--color-muted-foreground: oklch(0.5 0.018 252);
+	--color-accent: oklch(0.94 0.008 247);
+	--color-accent-foreground: oklch(0.21 0.034 264);
+	--color-destructive: oklch(0.577 0.245 27.325);
+	--color-destructive-foreground: oklch(0.985 0 0);
+	--color-border: oklch(0.91 0.012 250);
+	--color-input: oklch(0.92 0.012 250);
+	--color-ring: oklch(0.5 0.018 252);
+
+	/* Semantic accents preserved from her mockups.
+	   *-soft is the badge background (light pastel); *-foreground is the text drawn on top.
+	   Contrast aimed at WCAG AAA on small text. */
+	--color-success: oklch(0.68 0.16 152);
+	--color-success-foreground: oklch(0.32 0.1 152);
+	--color-success-soft: oklch(0.93 0.09 152);
+	--color-warning: oklch(0.74 0.15 60);
+	--color-warning-foreground: oklch(0.4 0.11 50);
+	--color-warning-soft: oklch(0.94 0.1 75);
+
+	--radius: 0.875rem;
+	--radius-xs: calc(var(--radius) * 0.5);
+	--radius-sm: calc(var(--radius) * 0.625);
+	--radius-md: calc(var(--radius) * 0.75);
+	--radius-lg: var(--radius);
+	--radius-xl: calc(var(--radius) * 1.25);
+
+	--shadow-soft: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px rgb(15 23 42 / 0.04);
+	--shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px rgb(15 23 42 / 0.06);
+}
+
+@layer base {
+	.dark {
+		/* "Obsidian" — neutral grayscale surfaces with a single cobalt accent.
+		   Inspired by the Taskplus reference (Pictures/Xnip2026-05-17_20-22-57.jpg).
+		   Three elevation steps (background → card → popover) all at chroma 0 so the only
+		   color in the UI is intentional: a bright white for primary actions and a cobalt
+		   focus ring (hue 264) that signals interaction without dominating the surfaces. */
+		--color-background: oklch(0.14 0 0);
+		--color-foreground: oklch(0.97 0 0);
+		--color-card: oklch(0.19 0 0);
+		--color-card-foreground: oklch(0.97 0 0);
+		--color-popover: oklch(0.21 0 0);
+		--color-popover-foreground: oklch(0.97 0 0);
+		--color-primary: oklch(0.97 0 0);
+		--color-primary-foreground: oklch(0.16 0 0);
+		--color-secondary: oklch(0.22 0 0);
+		--color-secondary-foreground: oklch(0.97 0 0);
+		--color-muted: oklch(0.22 0 0);
+		--color-muted-foreground: oklch(0.66 0 0);
+		--color-accent: oklch(0.24 0 0);
+		--color-accent-foreground: oklch(0.97 0 0);
+		--color-destructive: oklch(0.68 0.2 25);
+		--color-destructive-foreground: oklch(0.97 0 0);
+		--color-border: oklch(0.24 0 0);
+		--color-input: oklch(0.24 0 0);
+		--color-ring: oklch(0.62 0.22 264);
+
+		/* Dark-mode badges: tinted soft bg + bright foreground for contrast. */
+		--color-success: oklch(0.78 0.15 152);
+		--color-success-foreground: oklch(0.92 0.12 152);
+		--color-success-soft: oklch(0.3 0.08 152);
+		--color-warning: oklch(0.82 0.14 70);
+		--color-warning-foreground: oklch(0.92 0.13 80);
+		--color-warning-soft: oklch(0.32 0.09 60);
+	}
+
+	* {
+		@apply border-border;
+	}
+
+	html {
+		color-scheme: light;
+	}
+
+	html.dark {
+		color-scheme: dark;
+	}
+
+	body {
+		@apply bg-background text-foreground antialiased;
+		font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+	}
+
+	:focus-visible {
+		@apply outline-2 outline-offset-2 outline-ring;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		*,
+		*::before,
+		*::after {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+			scroll-behavior: auto !important;
+		}
+	}
+
+	@media print {
+		html,
+		body {
+			background: #fff !important;
+			color: #000 !important;
+		}
+		aside,
+		[data-skip-link] {
+			display: none !important;
+		}
+		main {
+			padding: 0 !important;
+		}
+	}
+}
