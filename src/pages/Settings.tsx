@@ -343,6 +343,7 @@ export function SettingsPage() {
 							type="file"
 							accept="application/json"
 							className="sr-only"
+							aria-label="Import workspace backup JSON file"
 							onChange={handleImportFile}
 						/>
 					</div>

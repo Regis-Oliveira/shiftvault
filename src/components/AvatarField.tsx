@@ -39,6 +39,7 @@ export function AvatarField({ name, value, onChange }: AvatarFieldProps) {
 					type="file"
 					accept="image/*"
 					className="sr-only"
+					aria-label="Upload member avatar image"
 					onChange={(event) => {
 						const file = event.target.files?.[0];
 						if (file) void handleFile(file);

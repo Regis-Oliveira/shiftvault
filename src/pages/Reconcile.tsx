@@ -194,6 +194,7 @@ export function ReconcilePage() {
 							type="file"
 							accept="application/json"
 							className="sr-only"
+							aria-label="Import workspace export JSON file for reconciliation"
 							onChange={handleFile}
 						/>
 					</div>
