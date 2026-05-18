@@ -9,6 +9,7 @@ import { TeamTabs } from "@/components/TeamTabs";
 import { Button } from "@/components/ui/button";
 import { useShiftVault, useVisibleMembers } from "@/data/DataProvider";
 import { formatMinutes, memberBalance } from "@/lib/hours";
+import { pluralize } from "@/lib/pluralize";
 
 export function DashboardPage() {
 	const { settings, isLoading, entriesForMember } = useShiftVault();
@@ -130,11 +131,4 @@ function DashboardHeader({ pluralLabel }: { pluralLabel: string }) {
 			</div>
 		</header>
 	);
-}
-
-function pluralize(label: string): string {
-	if (!label) return "Members";
-	if (label.endsWith("s")) return label;
-	if (label.endsWith("y")) return `${label.slice(0, -1)}ies`;
-	return `${label}s`;
 }

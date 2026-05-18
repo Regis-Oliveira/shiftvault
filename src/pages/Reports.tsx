@@ -28,7 +28,7 @@ import {
 	SelectTrigger,
 	SelectValue
 } from "@/components/ui/select";
-import { useShiftVault, useVisibleMembers } from "@/data/DataProvider";
+import { ALL_TEAMS, useShiftVault, useVisibleMembers } from "@/data/DataProvider";
 import { initialsFromName } from "@/lib/avatar";
 import { DATE_FULL } from "@/lib/dateFormat";
 import { formatMinutes } from "@/lib/hours";
@@ -47,7 +47,7 @@ import { cn } from "@/lib/utils";
 import type { Entry, TimeoffReason } from "@/types";
 
 export function ReportsPage() {
-	const { entries, settings, isLoading } = useShiftVault();
+	const { entries, settings, isLoading, teams, activeTeamId } = useShiftVault();
 	const members = useVisibleMembers();
 	const currentMonth = formatMonthString(new Date());
 	const [fromMonth, setFromMonth] = useState<string>(currentMonth);
@@ -76,18 +76,26 @@ export function ReportsPage() {
 	const monthsValid = fromValid && toValid;
 	const reversed = monthsValid && fromMonth > toMonth;
 
+	const activeTeam = activeTeamId === ALL_TEAMS ? null : teams.find((t) => t.id === activeTeamId);
+	const displayLabel = activeTeam ? activeTeam.name : "All teams";
+
 	const report = useMemo<ReportPayload | null>(() => {
 		if (!monthsValid) return null;
-		return buildReport(
-			fromMonth,
-			toMonth,
-			Array.from(selectedIds),
-			members,
-			entries,
-			settings,
-			reasonFilter === "all" ? {} : { timeoffReason: reasonFilter }
-		);
-	}, [monthsValid, fromMonth, toMonth, selectedIds, members, entries, settings, reasonFilter]);
+		return buildReport(fromMonth, toMonth, Array.from(selectedIds), members, entries, settings, {
+			memberLabel: displayLabel,
+			...(reasonFilter === "all" ? {} : { timeoffReason: reasonFilter })
+		});
+	}, [
+		monthsValid,
+		fromMonth,
+		toMonth,
+		selectedIds,
+		members,
+		entries,
+		settings,
+		reasonFilter,
+		displayLabel
+	]);
 
 	if (isLoading) {
 		return <p className="text-muted-foreground text-sm">Loading…</p>;
@@ -276,7 +284,7 @@ export function ReportsPage() {
 					<div className="flex flex-col gap-2">
 						<div className="flex items-center justify-between">
 							<span className="text-sm font-medium">
-								{settings.memberLabel}s ({selectedIds.size}/{members.length})
+								{displayLabel} ({selectedIds.size}/{members.length})
 							</span>
 							<button
 								type="button"
@@ -374,7 +382,7 @@ function ReportPreview({ report }: { report: ReportPayload }) {
 			</header>
 
 			<section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-				<SummaryStat label={`${report.memberLabel}s`} value={String(report.totals.memberCount)} />
+				<SummaryStat label={report.memberLabel} value={String(report.totals.memberCount)} />
 				<SummaryStat label="Entries" value={String(report.totals.entryCount)} />
 				<SummaryStat label="Overtime" value={formatMinutes(report.totals.overtimeMin)} />
 				<SummaryStat label="Time off" value={formatMinutes(report.totals.timeoffMin)} />
@@ -384,7 +392,7 @@ function ReportPreview({ report }: { report: ReportPayload }) {
 
 			{report.members.length === 0 ? (
 				<p className="text-muted-foreground text-sm">
-					No {report.memberLabel.toLowerCase()}s selected. Tick at least one to build a report.
+					No members selected. Tick at least one to build a report.
 				</p>
 			) : (
 				<div className="flex flex-col gap-6">
@@ -415,7 +423,7 @@ function MemberSection({ memberReport }: { memberReport: MemberReport }) {
 		memberReport.balanceMin > 0 ? "success" : memberReport.balanceMin < 0 ? "warning" : "secondary";
 
 	return (
-		<section className="space-y-3 break-inside-avoid">
+		<section className="border-border bg-background space-y-3 break-inside-avoid rounded-lg border p-4 print:border-0 print:bg-transparent print:p-0">
 			<header className="flex items-center justify-between gap-3 border-b pb-2">
 				<h3 className="text-base font-semibold">{memberReport.name}</h3>
 				<div className="flex flex-wrap items-center gap-1.5 text-xs">

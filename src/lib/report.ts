@@ -66,6 +66,12 @@ export function formatMonthString(date: Date): string {
 export interface BuildReportOptions {
 	/** Optional time-off reason filter. Undefined = include all. Includes all overtime regardless. */
 	timeoffReason?: TimeoffReason;
+	/**
+	 * Optional override for the report's member-label heading. Caller is responsible for
+	 * pluralization — the renderer prints this string as-is. Defaults to `settings.memberLabel`.
+	 * Useful when filtering to a specific team so the heading reflects the team name.
+	 */
+	memberLabel?: string;
 }
 
 /**
@@ -140,7 +146,7 @@ export function buildReport(
 	return {
 		schemaVersion: 2,
 		workspaceName: settings.workspaceName,
-		memberLabel: settings.memberLabel,
+		memberLabel: options.memberLabel ?? settings.memberLabel,
 		period: {
 			fromMonth: normalisedFrom,
 			toMonth: normalisedTo,
