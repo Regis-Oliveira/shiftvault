@@ -4,6 +4,7 @@ import {
 	ExternalLinkIcon,
 	FileSpreadsheetIcon,
 	PrinterIcon,
+	SearchIcon,
 	UsersRoundIcon
 } from "lucide-react";
 import { useEffect, useId, useMemo, useState } from "react";
@@ -20,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
 	Select,
@@ -42,6 +44,7 @@ import {
 	reportFilenameSlug,
 	toCsv
 } from "@/lib/report";
+import { matchMembers } from "@/lib/searchMembers";
 import { TIMEOFF_REASONS, timeoffReasonLabel } from "@/lib/timeoffReason";
 import { cn } from "@/lib/utils";
 import type { Entry, TimeoffReason } from "@/types";
@@ -54,6 +57,7 @@ export function ReportsPage() {
 	const [toMonth, setToMonth] = useState<string>(currentMonth);
 	const [reasonFilter, setReasonFilter] = useState<TimeoffReason | "all">("all");
 	const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+	const [memberSearch, setMemberSearch] = useState("");
 	const fromInputId = useId();
 	const toInputId = useId();
 	const reasonId = useId();
@@ -294,6 +298,20 @@ export function ReportsPage() {
 								{allChecked ? "Deselect all" : "Select all"}
 							</button>
 						</div>
+						<div className="relative">
+							<SearchIcon
+								aria-hidden="true"
+								className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-3.5 -translate-y-1/2"
+							/>
+							<Input
+								type="search"
+								value={memberSearch}
+								onChange={(e) => setMemberSearch(e.target.value)}
+								placeholder="Search by name or email"
+								className="h-9 pl-8 text-sm"
+								aria-label="Search members"
+							/>
+						</div>
 						<div className="border-border bg-background flex flex-col gap-1 rounded-md border p-2">
 							<MemberCheckboxRow
 								label={`Select all (${members.length})`}
@@ -302,15 +320,21 @@ export function ReportsPage() {
 								isHeader
 							/>
 							<div className="bg-border my-1 h-px" />
-							{members.map((m) => (
-								<MemberCheckboxRow
-									key={m.id}
-									label={m.name}
-									avatarBase64={m.avatarBase64}
-									state={selectedIds.has(m.id)}
-									onCheckedChange={(checked) => toggleMember(m.id, checked === true)}
-								/>
-							))}
+							{matchMembers(memberSearch, members).length === 0 ? (
+								<p className="text-muted-foreground px-2 py-2 text-xs">
+									No members match "{memberSearch}".
+								</p>
+							) : (
+								matchMembers(memberSearch, members).map((m) => (
+									<MemberCheckboxRow
+										key={m.id}
+										label={m.name}
+										avatarBase64={m.avatarBase64}
+										state={selectedIds.has(m.id)}
+										onCheckedChange={(checked) => toggleMember(m.id, checked === true)}
+									/>
+								))
+							)}
 						</div>
 					</div>
 				</Card>

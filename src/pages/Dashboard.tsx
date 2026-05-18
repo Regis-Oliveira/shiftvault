@@ -1,4 +1,5 @@
-import { FileTextIcon, PlusIcon, TrendingUpIcon, UsersRoundIcon } from "lucide-react";
+import { FileTextIcon, PlusIcon, SearchIcon, TrendingUpIcon, UsersRoundIcon } from "lucide-react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { EmptyStateCard } from "@/components/EmptyStateCard";
@@ -7,15 +8,19 @@ import { MemberFormDialog } from "@/components/MemberFormDialog";
 import { StatCard } from "@/components/StatCard";
 import { TeamTabs } from "@/components/TeamTabs";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useShiftVault, useVisibleMembers } from "@/data/DataProvider";
 import { formatMinutes, memberBalance } from "@/lib/hours";
 import { pluralize } from "@/lib/pluralize";
+import { matchMembers } from "@/lib/searchMembers";
 
 export function DashboardPage() {
 	const { settings, isLoading, entriesForMember } = useShiftVault();
 	const members = useVisibleMembers();
+	const [searchQuery, setSearchQuery] = useState("");
 	const label = settings.memberLabel;
 	const pluralLabel = pluralize(label);
+	const filteredMembers = matchMembers(searchQuery, members);
 
 	if (isLoading) {
 		return (
@@ -83,14 +88,35 @@ export function DashboardPage() {
 				/>
 			</section>
 
-			<section
-				aria-label={`${pluralLabel} list`}
-				className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
-			>
-				{members.map((member) => (
-					<MemberCard key={member.id} member={member} entries={entriesForMember(member.id)} />
-				))}
-			</section>
+			<div className="relative max-w-sm">
+				<SearchIcon
+					aria-hidden="true"
+					className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+				/>
+				<Input
+					type="search"
+					value={searchQuery}
+					onChange={(e) => setSearchQuery(e.target.value)}
+					placeholder={`Search ${pluralLabel.toLowerCase()} by name or email`}
+					className="pl-9"
+					aria-label={`Search ${pluralLabel.toLowerCase()}`}
+				/>
+			</div>
+
+			{filteredMembers.length === 0 ? (
+				<p className="text-muted-foreground text-sm">
+					No {pluralLabel.toLowerCase()} match <span className="font-medium">"{searchQuery}"</span>.
+				</p>
+			) : (
+				<section
+					aria-label={`${pluralLabel} list`}
+					className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
+				>
+					{filteredMembers.map((member) => (
+						<MemberCard key={member.id} member={member} entries={entriesForMember(member.id)} />
+					))}
+				</section>
+			)}
 		</div>
 	);
 }
