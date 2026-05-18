@@ -180,209 +180,218 @@ export function SettingsPage() {
 	}
 
 	return (
-		<div className="mx-auto max-w-3xl space-y-6">
+		<div className="mx-auto max-w-7xl space-y-6">
 			<PageHeader
 				eyebrow="Workspace"
 				title="Settings"
 				description="Workspace identity, appearance, and data tools. Everything lives in your browser."
 			/>
 
-			<Card className="gap-5 p-6">
-				<SectionHeading title="Workspace" description="Identity used across the app and reports." />
-				<form
-					onSubmit={form.handleSubmit(onSaveWorkspace)}
-					className="flex flex-col gap-5"
-					noValidate
-				>
-					<div className="flex flex-col gap-2">
-						<Label htmlFor={nameId}>Workspace name</Label>
-						<Input
-							id={nameId}
-							autoComplete="off"
-							aria-invalid={Boolean(form.formState.errors.workspaceName) || undefined}
-							{...form.register("workspaceName")}
-						/>
-						{form.formState.errors.workspaceName ? (
-							<p className="text-destructive text-xs" role="alert">
-								{form.formState.errors.workspaceName.message}
-							</p>
-						) : (
-							<p className="text-muted-foreground text-xs">
-								Shows on the sidebar and at the top of every report.
-							</p>
-						)}
-					</div>
-
-					<div className="flex flex-col gap-2">
-						<Label htmlFor={labelId}>Member label</Label>
-						<Input
-							id={labelId}
-							autoComplete="off"
-							placeholder="Member"
-							aria-invalid={Boolean(form.formState.errors.memberLabel) || undefined}
-							{...form.register("memberLabel")}
-						/>
-						{form.formState.errors.memberLabel ? (
-							<p className="text-destructive text-xs" role="alert">
-								{form.formState.errors.memberLabel.message}
-							</p>
-						) : (
-							<p className="text-muted-foreground text-xs">
-								What to call team members — e.g. "QA", "Engineer", "Tester". Auto-pluralised.
-							</p>
-						)}
-					</div>
-
-					<div className="flex flex-col gap-2">
-						<Label htmlFor={capId}>Max overtime in bank (hours)</Label>
-						<Input
-							id={capId}
-							type="number"
-							inputMode="numeric"
-							min={1}
-							max={999}
-							aria-invalid={Boolean(form.formState.errors.maxBalanceHours) || undefined}
-							{...form.register("maxBalanceHours", { valueAsNumber: true })}
-						/>
-						{form.formState.errors.maxBalanceHours ? (
-							<p className="text-destructive text-xs" role="alert">
-								{form.formState.errors.maxBalanceHours.message}
-							</p>
-						) : (
-							<p className="text-muted-foreground text-xs">
-								Overtime entries are blocked if they would push a member's balance over this.
-								Default 48h.
-							</p>
-						)}
-					</div>
-
-					<div className="flex justify-end">
-						<Button type="submit" disabled={form.formState.isSubmitting || !form.formState.isDirty}>
-							Save changes
-						</Button>
-					</div>
-				</form>
-			</Card>
-
-			<Card className="gap-5 p-6">
-				<SectionHeading
-					title="Teams"
-					description="Group members so HR can switch between QA, Engineering, etc. With one team the app stays flat — no tab bar."
-				/>
-				<TeamsManager />
-			</Card>
-
-			<Card className="gap-5 p-6">
-				<SectionHeading title="Appearance" description="Theme follows your system by default." />
-				<ToggleGroup
-					type="single"
-					value={mode}
-					onValueChange={(next) => {
-						if (next === "light" || next === "dark" || next === "system") setMode(next);
-					}}
-					aria-label="Theme"
-					variant="outline"
-					className="w-fit"
-				>
-					<ToggleGroupItem value="light" aria-label="Light theme">
-						<SunIcon aria-hidden="true" />
-						<span>Light</span>
-					</ToggleGroupItem>
-					<ToggleGroupItem value="system" aria-label="System theme">
-						<MonitorIcon aria-hidden="true" />
-						<span>System</span>
-					</ToggleGroupItem>
-					<ToggleGroupItem value="dark" aria-label="Dark theme">
-						<MoonIcon aria-hidden="true" />
-						<span>Dark</span>
-					</ToggleGroupItem>
-				</ToggleGroup>
-				<p className="text-muted-foreground text-xs">
-					Current resolved theme: <ThemeBadge mode={mode} />
-				</p>
-			</Card>
-
-			<Card className="gap-5 p-6">
-				<SectionHeading
-					title="Data"
-					description="Browser-only storage means backups are how you move between machines or restore after clearing your cache."
-				/>
-				<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-					<DataAction
-						icon={<DownloadIcon aria-hidden="true" />}
-						title="Export backup (JSON)"
-						description="Full workspace — members, entries, and settings. Use this to back up or move to another browser."
-						actionLabel="Download backup"
-						onClick={handleExportJson}
+			<div className="mx-auto w-full max-w-3xl space-y-6">
+				<Card className="gap-5 p-6">
+					<SectionHeading
+						title="Workspace"
+						description="Identity used across the app and reports."
 					/>
-					<DataAction
-						icon={<FileSpreadsheetIcon aria-hidden="true" />}
-						title="Export full history (CSV)"
-						description="Flat CSV of every entry across all members. Great for payroll / spreadsheet workflows."
-						actionLabel="Download CSV"
-						onClick={handleExportCsv}
-					/>
-				</div>
-				<div className="border-border bg-background flex flex-col gap-3 rounded-lg border p-4">
-					<div className="flex items-start gap-3">
-						<div className="bg-secondary text-secondary-foreground flex size-9 shrink-0 items-center justify-center rounded-md">
-							<UploadIcon aria-hidden="true" className="size-4" />
+					<form
+						onSubmit={form.handleSubmit(onSaveWorkspace)}
+						className="flex flex-col gap-5"
+						noValidate
+					>
+						<div className="flex flex-col gap-2">
+							<Label htmlFor={nameId}>Workspace name</Label>
+							<Input
+								id={nameId}
+								autoComplete="off"
+								aria-invalid={Boolean(form.formState.errors.workspaceName) || undefined}
+								{...form.register("workspaceName")}
+							/>
+							{form.formState.errors.workspaceName ? (
+								<p className="text-destructive text-xs" role="alert">
+									{form.formState.errors.workspaceName.message}
+								</p>
+							) : (
+								<p className="text-muted-foreground text-xs">
+									Shows on the sidebar and at the top of every report.
+								</p>
+							)}
 						</div>
-						<div className="flex-1 space-y-1">
-							<p className="text-sm font-medium">Import from backup (JSON)</p>
-							<p className="text-muted-foreground text-xs">
-								Pick a previous export. You'll choose whether to <strong>merge</strong> with current
-								data or <strong>replace</strong> everything.
-							</p>
-						</div>
-						<Button variant="outline" size="sm" onClick={handleImportClick}>
-							Choose file
-						</Button>
-						<input
-							ref={fileInputRef}
-							type="file"
-							accept="application/json"
-							className="sr-only"
-							aria-label="Import workspace backup JSON file"
-							onChange={handleImportFile}
-						/>
-					</div>
-				</div>
-			</Card>
 
-			<Card className="border-destructive/40 gap-5 p-6">
-				<SectionHeading
-					title="Danger zone"
-					description="Irreversible actions. Export a backup first if you might want this data later."
-				/>
-				<div className="flex items-center justify-between gap-4">
-					<div>
-						<p className="text-sm font-medium">Wipe all data</p>
-						<p className="text-muted-foreground text-xs">
-							Deletes every member, entry, and setting from this browser. Cannot be undone.
-						</p>
-					</div>
-					<ConfirmDialog
-						trigger={
-							<Button variant="destructive" size="sm">
-								<Trash2Icon aria-hidden="true" />
-								Wipe everything
+						<div className="flex flex-col gap-2">
+							<Label htmlFor={labelId}>Member label</Label>
+							<Input
+								id={labelId}
+								autoComplete="off"
+								placeholder="Member"
+								aria-invalid={Boolean(form.formState.errors.memberLabel) || undefined}
+								{...form.register("memberLabel")}
+							/>
+							{form.formState.errors.memberLabel ? (
+								<p className="text-destructive text-xs" role="alert">
+									{form.formState.errors.memberLabel.message}
+								</p>
+							) : (
+								<p className="text-muted-foreground text-xs">
+									What to call team members — e.g. "QA", "Engineer", "Tester". Auto-pluralised.
+								</p>
+							)}
+						</div>
+
+						<div className="flex flex-col gap-2">
+							<Label htmlFor={capId}>Max overtime in bank (hours)</Label>
+							<Input
+								id={capId}
+								type="number"
+								inputMode="numeric"
+								min={1}
+								max={999}
+								aria-invalid={Boolean(form.formState.errors.maxBalanceHours) || undefined}
+								{...form.register("maxBalanceHours", { valueAsNumber: true })}
+							/>
+							{form.formState.errors.maxBalanceHours ? (
+								<p className="text-destructive text-xs" role="alert">
+									{form.formState.errors.maxBalanceHours.message}
+								</p>
+							) : (
+								<p className="text-muted-foreground text-xs">
+									Overtime entries are blocked if they would push a member's balance over this.
+									Default 48h.
+								</p>
+							)}
+						</div>
+
+						<div className="flex justify-end">
+							<Button
+								type="submit"
+								disabled={form.formState.isSubmitting || !form.formState.isDirty}
+							>
+								Save changes
 							</Button>
-						}
-						title="Wipe the entire workspace?"
-						description={
-							<>
-								This permanently deletes <strong>{members.length} members</strong>,{" "}
-								<strong>{entries.length} entries</strong>, and all settings from this browser. This
-								cannot be undone — make sure you've exported a backup if you want this data later.
-							</>
-						}
-						confirmLabel="Wipe everything"
-						tone="destructive"
-						onConfirm={handleWipe}
+						</div>
+					</form>
+				</Card>
+
+				<Card className="gap-5 p-6">
+					<SectionHeading
+						title="Teams"
+						description="Group members so HR can switch between QA, Engineering, etc. With one team the app stays flat — no tab bar."
 					/>
-				</div>
-			</Card>
+					<TeamsManager />
+				</Card>
+
+				<Card className="gap-5 p-6">
+					<SectionHeading title="Appearance" description="Theme follows your system by default." />
+					<ToggleGroup
+						type="single"
+						value={mode}
+						onValueChange={(next) => {
+							if (next === "light" || next === "dark" || next === "system") setMode(next);
+						}}
+						aria-label="Theme"
+						variant="outline"
+						className="w-fit"
+					>
+						<ToggleGroupItem value="light" aria-label="Light theme">
+							<SunIcon aria-hidden="true" />
+							<span>Light</span>
+						</ToggleGroupItem>
+						<ToggleGroupItem value="system" aria-label="System theme">
+							<MonitorIcon aria-hidden="true" />
+							<span>System</span>
+						</ToggleGroupItem>
+						<ToggleGroupItem value="dark" aria-label="Dark theme">
+							<MoonIcon aria-hidden="true" />
+							<span>Dark</span>
+						</ToggleGroupItem>
+					</ToggleGroup>
+					<p className="text-muted-foreground text-xs">
+						Current resolved theme: <ThemeBadge mode={mode} />
+					</p>
+				</Card>
+
+				<Card className="gap-5 p-6">
+					<SectionHeading
+						title="Data"
+						description="Browser-only storage means backups are how you move between machines or restore after clearing your cache."
+					/>
+					<div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+						<DataAction
+							icon={<DownloadIcon aria-hidden="true" />}
+							title="Export backup (JSON)"
+							description="Full workspace — members, entries, and settings. Use this to back up or move to another browser."
+							actionLabel="Download backup"
+							onClick={handleExportJson}
+						/>
+						<DataAction
+							icon={<FileSpreadsheetIcon aria-hidden="true" />}
+							title="Export full history (CSV)"
+							description="Flat CSV of every entry across all members. Great for payroll / spreadsheet workflows."
+							actionLabel="Download CSV"
+							onClick={handleExportCsv}
+						/>
+					</div>
+					<div className="border-border bg-background flex flex-col gap-3 rounded-lg border p-4">
+						<div className="flex items-start gap-3">
+							<div className="bg-secondary text-secondary-foreground flex size-9 shrink-0 items-center justify-center rounded-md">
+								<UploadIcon aria-hidden="true" className="size-4" />
+							</div>
+							<div className="flex-1 space-y-1">
+								<p className="text-sm font-medium">Import from backup (JSON)</p>
+								<p className="text-muted-foreground text-xs">
+									Pick a previous export. You'll choose whether to <strong>merge</strong> with
+									current data or <strong>replace</strong> everything.
+								</p>
+							</div>
+							<Button variant="outline" size="sm" onClick={handleImportClick}>
+								Choose file
+							</Button>
+							<input
+								ref={fileInputRef}
+								type="file"
+								accept="application/json"
+								className="sr-only"
+								aria-label="Import workspace backup JSON file"
+								onChange={handleImportFile}
+							/>
+						</div>
+					</div>
+				</Card>
+
+				<Card className="border-destructive/40 gap-5 p-6">
+					<SectionHeading
+						title="Danger zone"
+						description="Irreversible actions. Export a backup first if you might want this data later."
+					/>
+					<div className="flex items-center justify-between gap-4">
+						<div>
+							<p className="text-sm font-medium">Wipe all data</p>
+							<p className="text-muted-foreground text-xs">
+								Deletes every member, entry, and setting from this browser. Cannot be undone.
+							</p>
+						</div>
+						<ConfirmDialog
+							trigger={
+								<Button variant="destructive" size="sm">
+									<Trash2Icon aria-hidden="true" />
+									Wipe everything
+								</Button>
+							}
+							title="Wipe the entire workspace?"
+							description={
+								<>
+									This permanently deletes <strong>{members.length} members</strong>,{" "}
+									<strong>{entries.length} entries</strong>, and all settings from this browser.
+									This cannot be undone — make sure you've exported a backup if you want this data
+									later.
+								</>
+							}
+							confirmLabel="Wipe everything"
+							tone="destructive"
+							onConfirm={handleWipe}
+						/>
+					</div>
+				</Card>
+			</div>
 
 			{pendingImport ? (
 				<ImportConfirmDialog
