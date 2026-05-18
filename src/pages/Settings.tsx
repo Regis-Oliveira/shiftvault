@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { z } from "zod";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { HolidaysManager } from "@/components/HolidaysManager";
 import { PageHeader } from "@/components/PageHeader";
 import { TeamsManager } from "@/components/TeamsManager";
 import { useTheme } from "@/components/ThemeProvider";
@@ -277,6 +278,14 @@ export function SettingsPage() {
 						description="Group members so HR can switch between QA, Engineering, etc. With one team the app stays flat — no tab bar."
 					/>
 					<TeamsManager />
+				</Card>
+
+				<Card className="gap-5 p-6">
+					<SectionHeading
+						title="Company holidays"
+						description="Dates that should be skipped when planning time off across a range."
+					/>
+					<HolidaysManager />
 				</Card>
 
 				<Card className="gap-5 p-6">

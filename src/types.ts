@@ -89,4 +89,10 @@ export interface AppSettings {
 	memberLabel: string;
 	workspaceName: string;
 	maxBalanceMin: number;
+	/**
+	 * Optional set of company holiday dates ("YYYY-MM-DD"). When present, the plan-time-off
+	 * range flow skips these dates as non-working. Missing on legacy records — readers should
+	 * default to `[]`. No IDB migration needed.
+	 */
+	holidays?: string[];
 }

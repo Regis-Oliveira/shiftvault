@@ -56,6 +56,41 @@ describe("expandRangeToWorkdays", () => {
 	it("returns one entry per day on a single-day weekend when included", () => {
 		expect(expandRangeToWorkdays(d("2026-05-17"), d("2026-05-17"), false)).toEqual(["2026-05-17"]);
 	});
+
+	it("excludes dates listed in the holidays set", () => {
+		// Thu May 14 → Tue May 19, excluding weekends. Mark May 15 (Fri) + May 18 (Mon) as holidays.
+		const holidays = new Set(["2026-05-15", "2026-05-18"]);
+		expect(expandRangeToWorkdays(d("2026-05-14"), d("2026-05-19"), true, holidays)).toEqual([
+			"2026-05-14",
+			"2026-05-19"
+		]);
+	});
+
+	it("treats holidays on weekends as no-ops when weekends are already excluded", () => {
+		// May 16 is Saturday — already excluded; marking it a holiday changes nothing.
+		const holidays = new Set(["2026-05-16"]);
+		expect(expandRangeToWorkdays(d("2026-05-14"), d("2026-05-18"), true, holidays)).toEqual([
+			"2026-05-14",
+			"2026-05-15",
+			"2026-05-18"
+		]);
+	});
+
+	it("removes weekend holidays when weekends are included in the range", () => {
+		// Same range with weekends included — the Saturday holiday now drops out.
+		const holidays = new Set(["2026-05-16"]);
+		expect(expandRangeToWorkdays(d("2026-05-14"), d("2026-05-18"), false, holidays)).toEqual([
+			"2026-05-14",
+			"2026-05-15",
+			"2026-05-17",
+			"2026-05-18"
+		]);
+	});
+
+	it("returns empty when every workday in the range is a holiday", () => {
+		const holidays = new Set(["2026-05-14", "2026-05-15", "2026-05-18"]);
+		expect(expandRangeToWorkdays(d("2026-05-14"), d("2026-05-18"), true, holidays)).toEqual([]);
+	});
 });
 
 describe("countWorkdaysInRange", () => {

@@ -49,7 +49,7 @@ function parseLocalDate(iso: string): Date | undefined {
 
 export function PlanTimeOffDialog({ member, entries, trigger }: Props) {
 	const [open, setOpen] = useState(false);
-	const { addTimeoffBatch } = useShiftVault();
+	const { addTimeoffBatch, settings } = useShiftVault();
 	const today = toIsoDate(new Date());
 	const fromId = useId();
 	const toId = useId();
@@ -86,10 +86,12 @@ export function PlanTimeOffDialog({ member, entries, trigger }: Props) {
 	const reversed = validRange && fromDate && toDate && fromDate.getTime() > toDate.getTime();
 	const validHours = Number.isFinite(hoursPerDay) && hoursPerDay > 0 && hoursPerDay <= 24;
 
+	const holidaySet = useMemo(() => new Set(settings.holidays ?? []), [settings.holidays]);
+
 	const workdays = useMemo(() => {
 		if (!fromDate || !toDate || !validHours) return [];
-		return expandRangeToWorkdays(fromDate, toDate, excludeWeekends);
-	}, [fromDate, toDate, excludeWeekends, validHours]);
+		return expandRangeToWorkdays(fromDate, toDate, excludeWeekends, holidaySet);
+	}, [fromDate, toDate, excludeWeekends, validHours, holidaySet]);
 
 	const durationMinPerDay = validHours ? Math.round(hoursPerDay * 60) : 0;
 	const totalMin = durationMinPerDay * workdays.length;
