@@ -178,10 +178,12 @@ Routes are lazy-loaded with `React.lazy` + `Suspense` in `src/App.tsx`, so the i
 
 Single source of truth: `src/index.css`.
 
-- `@theme inline { ... }` — light tokens via OKLCH.
-- `@layer base .dark { ... }` — dark overrides.
+- `@theme { ... }` — light tokens via OKLCH. **No `inline`** — utilities must compile to `var(--color-*)` references so the `.dark` overrides actually swap surfaces at runtime.
+- `@layer base .dark { ... }` — dark overrides ("Obsidian": neutral grayscale surfaces, chroma 0, bright white text, cobalt focus ring at hue 264).
 - `@media print` — hides the sidebar + page header; the `#report-preview` card becomes the printed page.
 - `@media (prefers-reduced-motion: reduce)` — kills animation durations globally.
+
+The light theme keeps a Pinterest-inspired slate-blue tint on surfaces (chroma 0.005–0.034 around hue 247) — intentional, came from the QA Manager's original mockups. Cross-mode brand parity is carried by the **cobalt focus ring** (`--color-ring: oklch(0.58 0.22 264)`), the single chromatic accent that appears identically in both modes.
 
 `ThemeProvider` (`src/components/ThemeProvider.tsx`) toggles `.dark` on `<html>`, watches `matchMedia("(prefers-color-scheme: dark)")` when in `system` mode, persists choice to `localStorage` key `shiftvault.theme`.
 
@@ -359,7 +361,7 @@ A11y: `SheetTitle` is rendered `sr-only` to satisfy Radix Dialog's title require
 Wired in two places:
 
 - **Dashboard** — input above the member grid; filter applies to the grid only. Stat cards and team-tab counts stay reflecting the full active-team list.
-- **Reports member checklist** — input above the list. Search filters which rows render; bulk "Select all" and the `selectedIds.size / members.length` heading still operate on the unfiltered list (intentional v1 trade-off; revisit if HR finds it confusing).
+- **Reports member checklist** — input above the list. The search drives a `visibleMembers = matchMembers(memberSearch, members)` derived value; the rendered rows, the master checkbox, the bulk "Select all" button, and the `(X/Y)` heading count all operate on that visible subset. Selections OUTSIDE the active query are preserved (so narrowing to "alice", clicking Deselect all, then clearing the search leaves every other member's selection intact). When the search has zero matches the bulk-toggle button disables itself.
 
 6 unit tests in `src/lib/__tests__/searchMembers.test.ts` (empty, whitespace, name match, email match, no match, trim).
 
