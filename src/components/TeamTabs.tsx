@@ -29,10 +29,7 @@ export function TeamTabs() {
 	];
 
 	return (
-		<nav
-			aria-label="Team filter"
-			className="-mx-2 flex items-center gap-1 overflow-x-auto px-2 pb-1"
-		>
+		<nav aria-label="Team filter" className="flex flex-wrap items-center gap-2">
 			{tabs.map((tab) => {
 				const isActive = activeTeamId === tab.id;
 				const colorTokens = tab.color ? TEAM_COLORS[tab.color] : null;
