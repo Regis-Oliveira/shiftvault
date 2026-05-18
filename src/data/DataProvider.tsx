@@ -253,6 +253,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 				return a.createdAt - b.createdAt;
 			})
 		);
+		await recordAudit("team.add", `Added team "${team.name}"`, {
+			teamId: team.id,
+			name: team.name,
+			color: team.color
+		});
 	}, []);
 
 	const updateTeam = useCallback(async (team: Team) => {
@@ -265,12 +270,25 @@ export function DataProvider({ children }: { children: ReactNode }) {
 					return a.createdAt - b.createdAt;
 				})
 		);
+		await recordAudit("team.update", `Updated team "${team.name}"`, {
+			teamId: team.id,
+			name: team.name,
+			color: team.color
+		});
 	}, []);
 
-	const removeTeam = useCallback(async (id: string) => {
-		await deleteTeam(id); // throws TeamHasMembersError if members are assigned
-		setTeams((prev) => prev.filter((t) => t.id !== id));
-	}, []);
+	const removeTeam = useCallback(
+		async (id: string) => {
+			const team = teams.find((t) => t.id === id);
+			await deleteTeam(id); // throws TeamHasMembersError if members are assigned
+			setTeams((prev) => prev.filter((t) => t.id !== id));
+			await recordAudit("team.delete", `Deleted team "${team?.name ?? id}"`, {
+				teamId: id,
+				name: team?.name
+			});
+		},
+		[teams]
+	);
 
 	const addEntry = useCallback(
 		async (entry: Entry) => {
@@ -386,8 +404,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
 				const next = prev.map((e) => overridesById.get(e.id) ?? e);
 				return [...newTimeoffs, ...next];
 			});
+
+			const member = members.find((m) => m.id === input.memberId);
+			await recordAudit(
+				"timeoff.batch",
+				`${member?.name ?? input.memberId} took ${formatMinutes(totalRequested)} off across ${input.dates.length} day${input.dates.length === 1 ? "" : "s"}`,
+				{
+					memberId: input.memberId,
+					dayCount: input.dates.length,
+					totalMin: totalRequested,
+					timeoffReason: input.timeoffReason
+				}
+			);
 		},
-		[entries]
+		[entries, members]
 	);
 
 	const applyReconciliation = useCallback(
@@ -466,6 +496,17 @@ export function DataProvider({ children }: { children: ReactNode }) {
 				const next = prev.map((e) => overridesById.get(e.id) ?? e);
 				return [...allEntriesToCommit, ...next];
 			});
+
+			await recordAudit(
+				"reconcile.apply",
+				`Reconciliation applied: imported ${allEntriesToCommit.length} entries (${settledCount} time-offs settled)`,
+				{
+					imported: allEntriesToCommit.length,
+					settledTimeoffs: settledCount,
+					newOvertimes: newOvertimes.length,
+					newTimeoffs: newTimeoffs.length
+				}
+			);
 
 			return { imported: allEntriesToCommit.length, settledTimeoffs: settledCount };
 		},
