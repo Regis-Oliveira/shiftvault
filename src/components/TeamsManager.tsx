@@ -151,20 +151,16 @@ export function TeamsManager() {
 											<SelectValue placeholder="Color" />
 										</SelectTrigger>
 										<SelectContent>
-											{TEAM_COLOR_ORDER.map((c) => {
-												const usedByOther = teams.some((t) => t.id !== team.id && t.color === c);
-												return (
-													<SelectItem key={c} value={c} disabled={usedByOther}>
-														<span
-															aria-hidden="true"
-															className="size-2.5 rounded-full"
-															style={{ backgroundColor: TEAM_COLORS[c].bg }}
-														/>
-														{TEAM_COLORS[c].label}
-														{usedByOther ? " (in use)" : ""}
-													</SelectItem>
-												);
-											})}
+											{TEAM_COLOR_ORDER.map((c) => (
+												<SelectItem key={c} value={c}>
+													<span
+														aria-hidden="true"
+														className="size-2.5 rounded-full"
+														style={{ backgroundColor: TEAM_COLORS[c].bg }}
+													/>
+													{TEAM_COLORS[c].label}
+												</SelectItem>
+											))}
 										</SelectContent>
 									</Select>
 									<Button

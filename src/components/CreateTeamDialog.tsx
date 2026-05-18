@@ -31,13 +31,10 @@ export function CreateTeamDialog({ trigger }: CreateTeamDialogProps) {
 	const [submitting, setSubmitting] = useState(false);
 
 	const trimmed = name.trim();
-	const usedColors = new Set(teams.map((t) => t.color).filter((c): c is TeamColor => Boolean(c)));
-	const allColorsTaken = usedColors.size >= TEAM_COLOR_ORDER.length;
 	const suggested = suggestNextTeamColor(teams.map((t) => t.color));
 	const [color, setColor] = useState<TeamColor>(suggested);
 
-	// When the dialog opens (or the used-color set shifts while open), realign the
-	// selection to the suggested unused color so the form always starts in a valid state.
+	// When the dialog opens, start with a fresh suggested color (first unused one).
 	useEffect(() => {
 		if (open) setColor(suggested);
 	}, [open, suggested]);
@@ -55,10 +52,6 @@ export function CreateTeamDialog({ trigger }: CreateTeamDialogProps) {
 		if (!trimmed) return;
 		if (teams.some((t) => t.name.toLowerCase() === trimmed.toLowerCase())) {
 			toast.error("A team with that name already exists");
-			return;
-		}
-		if (!allColorsTaken && usedColors.has(color)) {
-			toast.error("That color is already used by another team");
 			return;
 		}
 		setSubmitting(true);
@@ -87,8 +80,8 @@ export function CreateTeamDialog({ trigger }: CreateTeamDialogProps) {
 				<DialogHeader>
 					<DialogTitle>Create team</DialogTitle>
 					<DialogDescription>
-						Group members into a separate team. Each team gets its own color — colors already in use
-						are dimmed.
+						Group members into a separate team. We suggest a color you haven't used yet — pick any
+						you like.
 					</DialogDescription>
 				</DialogHeader>
 				<form className="flex flex-col gap-4" onSubmit={handleSubmit}>
@@ -107,18 +100,16 @@ export function CreateTeamDialog({ trigger }: CreateTeamDialogProps) {
 						<legend className="text-sm font-medium">Color</legend>
 						<div className="grid grid-cols-4 gap-2">
 							{TEAM_COLOR_ORDER.map((c) => {
-								const isUsed = !allColorsTaken && usedColors.has(c);
 								const isSelected = color === c;
 								return (
 									<label
 										key={c}
 										className={cn(
-											"inline-flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs font-medium transition-colors",
+											"inline-flex cursor-pointer items-center justify-center gap-2 rounded-md border px-2 py-2 text-xs font-medium transition-colors",
 											"has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring",
 											isSelected
 												? "bg-accent border-foreground/40 ring-ring/40 ring-2"
-												: "border-border bg-card hover:bg-accent",
-											isUsed ? "cursor-not-allowed opacity-40 hover:bg-card" : "cursor-pointer"
+												: "border-border bg-card hover:bg-accent"
 										)}
 									>
 										<input
@@ -126,7 +117,6 @@ export function CreateTeamDialog({ trigger }: CreateTeamDialogProps) {
 											name="team-color"
 											value={c}
 											checked={isSelected}
-											disabled={isUsed}
 											onChange={() => setColor(c)}
 											className="sr-only"
 										/>
@@ -135,20 +125,11 @@ export function CreateTeamDialog({ trigger }: CreateTeamDialogProps) {
 											className="size-3 rounded-full"
 											style={{ backgroundColor: TEAM_COLORS[c].bg }}
 										/>
-										<span className="truncate">
-											{TEAM_COLORS[c].label}
-											{isUsed ? " (used)" : ""}
-										</span>
+										<span className="truncate">{TEAM_COLORS[c].label}</span>
 									</label>
 								);
 							})}
 						</div>
-						{allColorsTaken ? (
-							<p className="text-muted-foreground text-xs">
-								All eight palette colors are already in use — pick any to share with an existing
-								team.
-							</p>
-						) : null}
 					</fieldset>
 					<DialogFooter>
 						<Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
