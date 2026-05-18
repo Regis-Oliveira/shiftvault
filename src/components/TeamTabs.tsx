@@ -1,20 +1,25 @@
-import { LayersIcon } from "lucide-react";
+import { LayersIcon, PlusIcon } from "lucide-react";
 
+import { CreateTeamDialog } from "@/components/CreateTeamDialog";
 import { ALL_TEAMS, useShiftVault } from "@/data/DataProvider";
 import { TEAM_COLORS } from "@/lib/teamColor";
 import { cn } from "@/lib/utils";
 
 /**
- * Tab bar above page content. Hidden when only one team exists (so single-team workspaces
- * — like the QA Manager's — never see the tabs). Wires straight to DataProvider's
- * `activeTeamId` so navigating between pages keeps the same team filter.
+ * Tab bar above page content. Wires straight to DataProvider's `activeTeamId` so navigating
+ * between pages keeps the same team filter. The trailing "+ New team" pill opens a dialog
+ * to create a team without leaving the page — HR's main entry point. The "All teams"
+ * filter pill only appears once a second team exists (nothing to filter otherwise).
  */
 export function TeamTabs() {
 	const { teams, activeTeamId, setActiveTeamId, members } = useShiftVault();
-	if (teams.length <= 1) return null;
+	if (teams.length === 0) return null;
 
+	const showAllTeams = teams.length >= 2;
 	const tabs = [
-		{ id: ALL_TEAMS, name: "All teams", color: undefined, count: members.length },
+		...(showAllTeams
+			? [{ id: ALL_TEAMS, name: "All teams", color: undefined, count: members.length }]
+			: []),
 		...teams.map((t) => ({
 			id: t.id,
 			name: t.name,
@@ -68,6 +73,21 @@ export function TeamTabs() {
 					</button>
 				);
 			})}
+			<CreateTeamDialog
+				trigger={
+					<button
+						type="button"
+						className={cn(
+							"border-border bg-card text-muted-foreground hover:text-foreground hover:bg-accent",
+							"inline-flex shrink-0 items-center gap-1.5 rounded-full border border-dashed px-3 py-1.5 text-sm font-medium transition-colors",
+							"focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+						)}
+					>
+						<PlusIcon aria-hidden="true" className="size-3.5" />
+						<span>New team</span>
+					</button>
+				}
+			/>
 		</nav>
 	);
 }
