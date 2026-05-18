@@ -90,22 +90,14 @@ function Sidebar() {
 function Brand({ workspaceName }: { workspaceName: string }) {
 	return (
 		<div className="flex items-center gap-2.5">
-			<div className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-xl shadow-[var(--shadow-soft)]">
-				<svg
-					role="img"
-					aria-label="ShiftVault"
-					viewBox="0 0 24 24"
-					className="size-5"
-					fill="none"
-					stroke="currentColor"
-					strokeWidth="2.2"
-					strokeLinecap="round"
-					strokeLinejoin="round"
-				>
-					<title>ShiftVault</title>
-					<circle cx="12" cy="12" r="9" />
-					<polyline points="12 7 12 12 15.5 14.5" />
-				</svg>
+			<div className="size-10 shrink-0 overflow-hidden rounded-xl shadow-[var(--shadow-soft)]">
+				<img
+					src="/logo-128.png"
+					alt="ShiftVault"
+					width={40}
+					height={40}
+					className="size-full object-cover"
+				/>
 			</div>
 			<div className="flex flex-col leading-tight">
 				<span className="text-sm font-semibold tracking-tight">ShiftVault</span>
