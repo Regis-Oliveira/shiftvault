@@ -56,9 +56,9 @@ interface AppSettings {
 
 ---
 
-## 2. IndexedDB schema (v3)
+## 2. IndexedDB schema (v4)
 
-Database `shiftvault`, four stores:
+Database `shiftvault`, five stores:
 
 | Store      | Key path | Indexes                  | Notes                                                 |
 | ---------- | -------- | ------------------------ | ----------------------------------------------------- |
@@ -66,6 +66,7 @@ Database `shiftvault`, four stores:
 | `entries`  | `id`     | `by-member`, `by-date`   | both indexes are non-unique                           |
 | `settings` | `id`     | —                        | always exactly one row with `id: "app"`               |
 | `teams`    | `id`     | —                        | sorted client-side by `sortOrder` then `createdAt`    |
+| `audit`    | `id`     | `by-timestamp`           | append-only mutation log, newest-first reads          |
 
 ### v1 → v2 migration
 
@@ -80,6 +81,11 @@ Database `shiftvault`, four stores:
 - Creates the `teams` store.
 - If no teams exist, inserts a `Default` team (id `default-team`).
 - Backfills every `Member.teamId` to that default team's id when missing.
+
+### v3 → v4 migration
+
+- Creates the `audit` store with a `by-timestamp` index.
+- No backfill — audit history starts the moment the v4 upgrade runs.
 
 No data is deleted in any migration. `memberBalance = ΣOT − ΣTO` stays exact across the migration. New workspaces also pass through `ensureDefaultTeam()` on boot so a Default team is guaranteed regardless of whether v3 ran or this is a fresh install.
 
@@ -334,6 +340,88 @@ The HR-side import-and-merge flow for combining a peer's workspace dump into the
 
 **Bundle:** the Reconcile chunk is ~12.6 kB raw / 4.1 kB gz, lazy-loaded behind its route.
 
-## 16. Roadmap notes
+## 16. Mobile drawer nav
 
-All locked roadmap slices are now ✅. Future work is open-ended (e.g. reconcile policy tweaks, richer team analytics).
+The desktop sidebar uses `hidden sm:flex`, so below the `sm` breakpoint there was no navigation surface at all. `AppShell.tsx` now also renders a `<MobileNav>` at the top of `<main>` (visible only `< sm`) — a hamburger button that opens a left-side `Sheet` (shadcn primitive on top of Radix Dialog).
+
+To avoid drift, the sidebar body lives in a single `<SidebarContents>` component that both the desktop `<aside>` and the mobile `<SheetContent>` render. Tapping any `NavLink` fires an `onNavigate` callback that closes the sheet (`setOpen(false)`); on desktop the prop is undefined and nav clicks are pure routing.
+
+A11y: `SheetTitle` is rendered `sr-only` to satisfy Radix Dialog's title requirement; the hamburger has `aria-label="Open navigation menu"`.
+
+## 17. Member search
+
+`src/lib/searchMembers.ts` exports a single pure helper `matchMembers(query, members)` — trims the query, lowercases, then filters on `name` OR `email` substring. Empty query returns the input unchanged.
+
+Wired in two places:
+
+- **Dashboard** — input above the member grid; filter applies to the grid only. Stat cards and team-tab counts stay reflecting the full active-team list.
+- **Reports member checklist** — input above the list. Search filters which rows render; bulk "Select all" and the `selectedIds.size / members.length` heading still operate on the unfiltered list (intentional v1 trade-off; revisit if HR finds it confusing).
+
+6 unit tests in `src/lib/__tests__/searchMembers.test.ts` (empty, whitespace, name match, email match, no match, trim).
+
+## 18. Company holidays
+
+Stored as optional `AppSettings.holidays: string[]` of `"YYYY-MM-DD"` dates. Optional → readers default to `[]`, no IDB migration.
+
+`expandRangeToWorkdays(from, to, excludeWeekends, holidays?: ReadonlySet<string>)` gained an optional fourth arg. When provided, dates in the set are skipped in addition to weekends. `countWorkdaysInRange` passes through.
+
+`HolidaysManager` (Settings card between Teams and Appearance) renders the list, lets HR add via `DayPicker` + Add button, and remove via trash button. Persists via the existing `updateSettings` channel. `PlanTimeOffDialog` reads `settings.holidays`, builds a `Set` once via `useMemo`, and passes it to `expandRangeToWorkdays` so the live preview and the batched commit both honor the same skip set.
+
+4 new tests in `workdays.test.ts` cover holiday inside the range, holiday-on-weekend no-op (already excluded), weekend-holiday with weekends included, all-workdays-holidays returns empty.
+
+## 19. Member archive (soft-delete)
+
+`Member.archivedAt?: number` — optional timestamp; absence means active. `removeMember` still exists (and now records a `member.delete` audit event with the cascaded entry count); archive is the recommended path that preserves entry history for back-dated reports.
+
+DataProvider gains `archiveMember(id)` / `unarchiveMember(id)` callbacks (thin wrappers around `saveMember` that set/clear the field). `useVisibleMembers()` filters out archived in addition to the team filter, so Dashboard / Calendar / Reports / team-tab counts hide archived members consistently. A new `useArchivedMembers()` hook returns just the archived set, for Dashboard's "Archived (N)" expandable disclosure at the bottom of the page (cards render at `opacity-70`).
+
+MemberDetail surfaces archive state with a banner above the page header + a Restore button; the entry-add buttons (Log overtime, Log time off, Plan time off) hide when archived. The destructive delete remains as a separate "Delete forever" action whose copy nudges users toward Archive first.
+
+## 20. Audit log (`/audit`, IDB v4)
+
+Append-only mutation log. Every state-changing call writes an event after the primary commit. Failures to write audit events are caught and logged via `console.error` — never block the primary mutation, so editing remains reliable even if the audit store has trouble.
+
+**Event kinds (`AuditEventKind` union):**
+
+| Domain    | Kinds                                                         |
+| --------- | ------------------------------------------------------------- |
+| Members   | `member.add` / `update` / `delete` / `archive` / `unarchive`  |
+| Entries   | `entry.add` / `entry.delete` / `entry.update` *(reserved)*    |
+| Time off  | `timeoff.batch` (range flow)                                  |
+| Teams     | `team.add` / `team.update` / `team.delete`                    |
+| Workspace | `settings.update` / `import.merge` / `import.replace` / `wipe`|
+| HR flow   | `reconcile.apply`                                             |
+
+Each event: `{ id, timestamp, kind, summary, payload? }`. `summary` is the free-text human-readable line shown in `/audit`. `payload` carries structured detail (`memberId`, counts, etc.) for future filtering.
+
+**Write helpers** (`src/lib/db.ts`):
+- `appendAuditEvent(event)` — writes one record.
+- `listAuditEvents(limit?)` — returns events newest-first; `limit` slices the result.
+
+**DataProvider** wraps each mutation with a `recordAudit(kind, summary, payload)` call (defined at module top, wraps `appendAuditEvent` with try/catch). Settings handles `import.merge` / `import.replace` / `wipe` directly (page-level) — the wipe path appends *after* `wipeAll` so the wipe entry is the first record of the freshly-cleared log.
+
+**Page:** lazy-loaded `/audit` route shows newest-first with a free-text filter input that matches both `summary` and `kind`. Sidebar nav item (`ActivityIcon`) sits between Reconcile and Settings.
+
+**Export/Import:** `ExportPayload.schemaVersion` bumps to 4 with optional `audit: AuditEvent[]`. `importAll` accepts v1/v2/v3 payloads (no audit) and v4 (audit included).
+
+## 21. Team-aware labels
+
+`memberLabel` setting was historically the only label driving Dashboard CTAs and Reports headings. For HR's multi-team workspace it doesn't fit — the QA team's button shouldn't say "New Engineer."
+
+Resolution logic on Reports + Dashboard:
+
+```ts
+const activeTeam = activeTeamId === ALL_TEAMS ? null : teams.find((t) => t.id === activeTeamId);
+const singleTeam = teams.length === 1 ? teams[0] : null;
+const label = activeTeam?.name ?? singleTeam?.name ?? "Member";
+```
+
+- Specific team active → team name ("New QA")
+- Single-team workspace (no team selected because there's nothing to choose) → that one team's name (gives the QA Manager "New QA" naturally)
+- Multi-team workspace + "All teams" → generic "Member" / "Members"
+
+`settings.memberLabel` is kept around as a workspace-default for the member-add form placeholders and CSV exports.
+
+## 22. Roadmap notes
+
+All locked + post-roadmap slices are now ✅. Lower-priority follow-ups remain in the backlog (calendar holiday visualization, Reports search/select sync, audit-log size cap, light-theme parity sweep).

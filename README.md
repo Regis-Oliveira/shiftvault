@@ -107,6 +107,8 @@ Pinterest-inspired soft neumorphic. Tokens in `src/index.css` (`@theme inline` +
 
 ## Roadmap
 
+**Original locked plan — all shipped:**
+
 1. ✅ **Settlement / hour-bank model** with FIFO consumption
 2. ✅ **Settings panel** — workspace identity, theme picker, JSON / CSV export, import, danger-zone wipe
 3. ✅ **Teams + multi-team UI** for HR (tab bar across QA, Engineering, AI, Business)
@@ -114,6 +116,17 @@ Pinterest-inspired soft neumorphic. Tokens in `src/index.css` (`@theme inline` +
 5. ✅ **Day-cell visualization on Calendar** — orange fill for time-off, green fill for open overtime, green ring for fully-settled overtime
 6. ✅ **Structured reason on time-off** — vacation / sick / comp / personal categories + Reports filter + CSV columns
 7. ✅ **HR reconciliation page** (`/reconcile`) — file import + email-keyed diff + bulk approve with tolerant FIFO settlement
+
+**Follow-on work (post-roadmap):**
+
+- ✅ **Mobile drawer nav** — hamburger button + left-side Sheet on `< sm` breakpoints; desktop sidebar and mobile sheet share a single `SidebarContents` body
+- ✅ **Member search** — case-insensitive name/email filter on Dashboard and the Reports member checklist (`matchMembers` helper)
+- ✅ **Company holidays** — Settings card maintains `settings.holidays: string[]`; Plan time off skips them as non-working days
+- ✅ **Member archive (soft-delete)** — `Member.archivedAt` hides former employees from active views while preserving entry history; Dashboard exposes an "Archived (N)" disclosure for restore
+- ✅ **Audit log** (`/audit`) — append-only IDB store recording every mutation (member, entry, team, batch, reconcile, settings, import, wipe); JSON export includes audit history
+- ✅ **Team-aware labels** — Dashboard + Reports headings and CTAs follow the active team tab instead of the workspace `memberLabel`
+- ✅ **Orrery brand + Open Graph share card** — favicon set + OG/Twitter meta for `https://shiftvault.vercel.app`
+- ✅ **Obsidian dark theme** — neutral grayscale surfaces with a single cobalt focus ring
 
 ## Deploy
 
