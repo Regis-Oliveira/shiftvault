@@ -136,15 +136,27 @@ export function ReportsPage() {
 		});
 	}
 
-	function toggleAll(checked: boolean) {
-		setSelectedIds(checked ? new Set(members.map((m) => m.id)) : new Set());
+	// Search filters the checklist view; bulk select-all and the counts follow the same scope so
+	// the action matches what the user actually sees. Selections OUTSIDE the search are preserved.
+	const visibleMembers = matchMembers(memberSearch, members);
+	const visibleIds = visibleMembers.map((m) => m.id);
+	const visibleSelectedCount = visibleIds.filter((id) => selectedIds.has(id)).length;
+
+	function toggleAllVisible(checked: boolean) {
+		setSelectedIds((prev) => {
+			const next = new Set(prev);
+			if (checked) for (const id of visibleIds) next.add(id);
+			else for (const id of visibleIds) next.delete(id);
+			return next;
+		});
 	}
 
-	const allChecked = selectedIds.size === members.length;
-	const noneChecked = selectedIds.size === 0;
-	const selectAllState: boolean | "indeterminate" = allChecked
+	const allVisibleChecked =
+		visibleMembers.length > 0 && visibleSelectedCount === visibleMembers.length;
+	const noneVisibleChecked = visibleSelectedCount === 0;
+	const selectAllState: boolean | "indeterminate" = allVisibleChecked
 		? true
-		: noneChecked
+		: noneVisibleChecked
 			? false
 			: "indeterminate";
 
@@ -288,14 +300,15 @@ export function ReportsPage() {
 					<div className="flex flex-col gap-2">
 						<div className="flex items-center justify-between">
 							<span className="text-sm font-medium">
-								{displayLabel} ({selectedIds.size}/{members.length})
+								{displayLabel} ({visibleSelectedCount}/{visibleMembers.length})
 							</span>
 							<button
 								type="button"
-								onClick={() => toggleAll(!allChecked)}
-								className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline"
+								onClick={() => toggleAllVisible(!allVisibleChecked)}
+								disabled={visibleMembers.length === 0}
+								className="text-muted-foreground hover:text-foreground text-xs underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-50 disabled:no-underline"
 							>
-								{allChecked ? "Deselect all" : "Select all"}
+								{allVisibleChecked ? "Deselect all" : "Select all"}
 							</button>
 						</div>
 						<div className="relative">
@@ -314,18 +327,18 @@ export function ReportsPage() {
 						</div>
 						<div className="border-border bg-background flex flex-col gap-1 rounded-md border p-2">
 							<MemberCheckboxRow
-								label={`Select all (${members.length})`}
+								label={`Select all (${visibleMembers.length})`}
 								state={selectAllState}
-								onCheckedChange={(checked) => toggleAll(checked === true)}
+								onCheckedChange={(checked) => toggleAllVisible(checked === true)}
 								isHeader
 							/>
 							<div className="bg-border my-1 h-px" />
-							{matchMembers(memberSearch, members).length === 0 ? (
+							{visibleMembers.length === 0 ? (
 								<p className="text-muted-foreground px-2 py-2 text-xs">
 									No members match "{memberSearch}".
 								</p>
 							) : (
-								matchMembers(memberSearch, members).map((m) => (
+								visibleMembers.map((m) => (
 									<MemberCheckboxRow
 										key={m.id}
 										label={m.name}
