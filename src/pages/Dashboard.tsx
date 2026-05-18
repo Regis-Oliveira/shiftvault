@@ -9,18 +9,29 @@ import { StatCard } from "@/components/StatCard";
 import { TeamTabs } from "@/components/TeamTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useArchivedMembers, useShiftVault, useVisibleMembers } from "@/data/DataProvider";
+import {
+	ALL_TEAMS,
+	useArchivedMembers,
+	useShiftVault,
+	useVisibleMembers
+} from "@/data/DataProvider";
 import { formatMinutes, memberBalance } from "@/lib/hours";
 import { pluralize } from "@/lib/pluralize";
 import { matchMembers } from "@/lib/searchMembers";
 
 export function DashboardPage() {
-	const { settings, isLoading, entriesForMember } = useShiftVault();
+	const { isLoading, entriesForMember, teams, activeTeamId } = useShiftVault();
 	const members = useVisibleMembers();
 	const archived = useArchivedMembers();
 	const [searchQuery, setSearchQuery] = useState("");
 	const [showArchived, setShowArchived] = useState(false);
-	const label = settings.memberLabel;
+
+	// Team-aware noun: when a team is active (or there's exactly one team), borrow its name;
+	// otherwise fall back to "Member". `settings.memberLabel` only still drives the member-add
+	// form + CSV exports — it's no longer the source of truth for Dashboard CTAs.
+	const activeTeam = activeTeamId === ALL_TEAMS ? null : teams.find((t) => t.id === activeTeamId);
+	const singleTeam = teams.length === 1 ? teams[0] : null;
+	const label = activeTeam?.name ?? singleTeam?.name ?? "Member";
 	const pluralLabel = pluralize(label);
 	const filteredMembers = matchMembers(searchQuery, members);
 
@@ -40,16 +51,16 @@ export function DashboardPage() {
 	if (members.length === 0) {
 		return (
 			<div className="mx-auto max-w-7xl space-y-8">
-				<DashboardHeader pluralLabel={pluralLabel} />
+				<DashboardHeader label={label} pluralLabel={pluralLabel} />
 				<TeamTabs />
 				<EmptyStateCard
 					icon={UsersRoundIcon}
-					title={`No ${pluralize(label).toLowerCase()} yet`}
+					title={`No ${pluralLabel.toLowerCase()} yet`}
 					description={`Add your first ${label.toLowerCase()} to start logging overtime and time off.`}
 					action={
 						<MemberFormDialog
 							mode="create"
-							memberLabel={settings.memberLabel}
+							memberLabel={label}
 							trigger={
 								<Button size="lg">
 									<PlusIcon aria-hidden="true" />
@@ -68,7 +79,7 @@ export function DashboardPage() {
 
 	return (
 		<div className="mx-auto max-w-7xl space-y-8">
-			<DashboardHeader pluralLabel={pluralLabel} />
+			<DashboardHeader label={label} pluralLabel={pluralLabel} />
 
 			<TeamTabs />
 
@@ -145,7 +156,7 @@ export function DashboardPage() {
 	);
 }
 
-function DashboardHeader({ pluralLabel }: { pluralLabel: string }) {
+function DashboardHeader({ label, pluralLabel }: { label: string; pluralLabel: string }) {
 	const { settings } = useShiftVault();
 	return (
 		<header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -170,11 +181,11 @@ function DashboardHeader({ pluralLabel }: { pluralLabel: string }) {
 				</Button>
 				<MemberFormDialog
 					mode="create"
-					memberLabel={settings.memberLabel}
+					memberLabel={label}
 					trigger={
 						<Button>
 							<PlusIcon aria-hidden="true" />
-							New {settings.memberLabel.toLowerCase()}
+							New {label.toLowerCase()}
 						</Button>
 					}
 				/>
