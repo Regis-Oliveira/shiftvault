@@ -289,8 +289,12 @@ Visual encoding on each day cell, implemented in `DayButtonWithDots` inside `src
 | Day with only-open overtime | `bg-success-soft/40` fill (green tint) + green dot |
 | Day with overtime where every OT entry is fully settled | `ring-1 ring-inset ring-success/40` (green ring, no fill) + green dot |
 | Mix of OT + time-off | Time-off fill wins (the louder signal); both dots render |
+| Empty company holiday | `bg-muted/60` fill (gray tint) |
+| Any company holiday | Small muted dot at top-right (always shown, even when an entry tint overrides the fill) |
 | Nothing logged | Plain cell |
 | Selected (day or range start/end) | `bg-primary text-primary-foreground` overrides everything above |
+
+Holiday tint sits at the lowest priority of the fill cascade so actual entries (OT/time-off) take over the cell color. The top-right indicator dot is always visible when the day is in `settings.holidays`, so HR can spot a holiday even on busy days.
 | Range middle | `bg-accent text-accent-foreground` |
 
 The page description text on Calendar surfaces this encoding so it stays discoverable.

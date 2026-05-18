@@ -41,7 +41,8 @@ const ALL_MEMBERS = "__all__";
 type Mode = "day" | "range";
 
 export function CalendarPage() {
-	const { entries, isLoading } = useShiftVault();
+	const { entries, isLoading, settings } = useShiftVault();
+	const holidaysSet = useMemo(() => new Set(settings.holidays ?? []), [settings.holidays]);
 	const members = useVisibleMembers();
 	const [memberFilter, setMemberFilter] = useState<string>(ALL_MEMBERS);
 	const [month, setMonth] = useState<Date>(startOfMonth(new Date()));
@@ -136,7 +137,7 @@ export function CalendarPage() {
 			<PageHeader
 				eyebrow="Team view"
 				title="Calendar"
-				description="Orange cells are days someone was off, green cells are open overtime, a green ring marks overtime that's been paid out. Pick a day or switch to range mode to span months."
+				description="Orange cells are days someone was off, green cells are open overtime, a green ring marks overtime that's been paid out, and a gray tint with a corner dot marks a company holiday. Pick a day or switch to range mode to span months."
 				actions={
 					<Select value={memberFilter} onValueChange={setMemberFilter}>
 						<SelectTrigger className="min-w-[200px]" aria-label="Filter by member">
@@ -217,7 +218,13 @@ export function CalendarPage() {
 							month={month}
 							onMonthChange={setMonth}
 							components={{
-								DayButton: (props) => <DayButtonWithDots {...props} entriesByDate={entriesByDate} />
+								DayButton: (props) => (
+									<DayButtonWithDots
+										{...props}
+										entriesByDate={entriesByDate}
+										holidaysSet={holidaysSet}
+									/>
+								)
 							}}
 						/>
 					) : (
@@ -229,7 +236,13 @@ export function CalendarPage() {
 							onMonthChange={setMonth}
 							numberOfMonths={2}
 							components={{
-								DayButton: (props) => <DayButtonWithDots {...props} entriesByDate={entriesByDate} />
+								DayButton: (props) => (
+									<DayButtonWithDots
+										{...props}
+										entriesByDate={entriesByDate}
+										holidaysSet={holidaysSet}
+									/>
+								)
 							}}
 						/>
 					)}
@@ -250,6 +263,7 @@ export function CalendarPage() {
 
 interface DayButtonWithDotsProps extends DayButtonProps {
 	entriesByDate: Map<string, Entry[]>;
+	holidaysSet: ReadonlySet<string>;
 }
 
 function DayButtonWithDots({
@@ -257,6 +271,7 @@ function DayButtonWithDots({
 	modifiers,
 	className,
 	entriesByDate,
+	holidaysSet,
 	...rest
 }: DayButtonWithDotsProps) {
 	const iso = toIsoDate(day.date);
@@ -264,6 +279,7 @@ function DayButtonWithDots({
 	const overtimeEntries = dayEntries.filter((e) => e.kind === "overtime");
 	const hasOvertime = overtimeEntries.length > 0;
 	const hasTimeoff = dayEntries.some((e) => e.kind === "timeoff");
+	const isHoliday = holidaysSet.has(iso);
 	// "Settled" = every overtime entry on this day has been fully consumed by a time-off.
 	const allOvertimeSettled =
 		hasOvertime && overtimeEntries.every((e) => (e.consumedMin ?? 0) >= e.durationMin);
@@ -271,16 +287,19 @@ function DayButtonWithDots({
 	const isRangeMiddle = modifiers.range_middle ?? false;
 	const isRangeStartOrEnd = (modifiers.range_start ?? false) || (modifiers.range_end ?? false);
 	const inversed = isSelected && !isRangeMiddle;
-	// Cell-level fill: time-off is the louder signal (someone was actually off),
-	// so it wins over an overtime tint on the same day. Selection / range states still override.
+	// Cell-level fill priority: time-off > open-overtime > holiday > empty. Selection / range
+	// states still override everything. Settled-overtime days get a ring instead of a fill so
+	// they read as "this day's work was paid out" rather than "still in the bank".
 	const tint = !isSelected
 		? hasTimeoff
 			? "bg-warning-soft/60"
 			: hasOvertime
 				? allOvertimeSettled
-					? null // muted — settled OT gets a ring instead, no fill
+					? null
 					: "bg-success-soft/40"
-				: null
+				: isHoliday
+					? "bg-muted/60"
+					: null
 		: null;
 
 	return (
@@ -301,6 +320,16 @@ function DayButtonWithDots({
 			)}
 		>
 			<span className="leading-none">{day.date.getDate()}</span>
+			{isHoliday ? (
+				<span
+					role="img"
+					aria-label="Company holiday"
+					className={cn(
+						"absolute top-1 right-1 block size-1.5 rounded-full",
+						inversed ? "bg-primary-foreground/70" : "bg-muted-foreground/60"
+					)}
+				/>
+			) : null}
 			{hasOvertime || hasTimeoff ? (
 				<span aria-hidden="true" className="absolute bottom-1 flex gap-0.5">
 					{hasOvertime ? (
