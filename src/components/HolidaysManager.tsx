@@ -15,12 +15,6 @@ function parseLocalDate(iso: string): Date | null {
 	return Number.isNaN(date.getTime()) ? null : date;
 }
 
-/**
- * Manage the workspace's company-holiday list (`settings.holidays`). The plan-time-off range
- * flow uses this set to skip non-working days. Dates persist as "YYYY-MM-DD" strings via the
- * existing `updateSettings` channel — no IDB migration needed (field is optional on legacy
- * records).
- */
 export function HolidaysManager() {
 	const { settings, updateSettings } = useShiftVault();
 	const [draft, setDraft] = useState<string>("");

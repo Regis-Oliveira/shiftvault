@@ -5,12 +5,6 @@ import { ALL_TEAMS, useShiftVault } from "@/data/DataProvider";
 import { TEAM_COLORS } from "@/lib/teamColor";
 import { cn } from "@/lib/utils";
 
-/**
- * Tab bar above page content. Wires straight to DataProvider's `activeTeamId` so navigating
- * between pages keeps the same team filter. The trailing "+ New team" pill opens a dialog
- * to create a team without leaving the page — HR's main entry point. The "All teams"
- * filter pill only appears once a second team exists (nothing to filter otherwise).
- */
 export function TeamTabs() {
 	const { teams, activeTeamId, setActiveTeamId, members } = useShiftVault();
 	if (teams.length === 0) return null;

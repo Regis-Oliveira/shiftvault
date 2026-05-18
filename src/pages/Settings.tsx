@@ -86,19 +86,17 @@ export function SettingsPage() {
 		toast.success("Workspace settings saved");
 	}
 
-	function handleExportJson() {
-		(async () => {
-			try {
-				const payload = await exportAll();
-				const filename = `shiftvault-backup-${todayStamp()}.json`;
-				downloadBlob(JSON.stringify(payload, null, 2), filename, "application/json");
-				toast.success("Backup exported", { description: filename, duration: 4000 });
-			} catch (err) {
-				toast.error("Couldn't export backup", {
-					description: err instanceof Error ? err.message : "Unknown error"
-				});
-			}
-		})();
+	async function handleExportJson() {
+		try {
+			const payload = await exportAll();
+			const filename = `shiftvault-backup-${todayStamp()}.json`;
+			downloadBlob(JSON.stringify(payload, null, 2), filename, "application/json");
+			toast.success("Backup exported", { description: filename, duration: 4000 });
+		} catch (err) {
+			toast.error("Couldn't export backup", {
+				description: err instanceof Error ? err.message : "Unknown error"
+			});
+		}
 	}
 
 	function handleExportCsv() {

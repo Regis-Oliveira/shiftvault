@@ -99,7 +99,6 @@ interface DataContextValue {
 	addEntry: (entry: Entry) => Promise<void>;
 	addTimeoffBatch: (input: TimeoffBatchInput) => Promise<void>;
 	applyReconciliation: (entries: Entry[]) => Promise<{ imported: number; settledTimeoffs: number }>;
-	updateEntry: (entry: Entry) => Promise<void>;
 	removeEntry: (id: string) => Promise<void>;
 	updateSettings: (next: Partial<AppSettings>) => Promise<void>;
 	entriesForMember: (memberId: string) => Entry[];
@@ -473,12 +472,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 		[entries]
 	);
 
-	const updateEntry = useCallback(async (entry: Entry) => {
-		// Editing isn't surfaced in the UI yet; pass-through for completeness.
-		await saveEntry(entry);
-		setEntries((prev) => prev.map((e) => (e.id === entry.id ? entry : e)));
-	}, []);
-
 	const removeEntry = useCallback(
 		async (id: string) => {
 			const target = entries.find((e) => e.id === id);
@@ -555,7 +548,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			addEntry,
 			addTimeoffBatch,
 			applyReconciliation,
-			updateEntry,
 			removeEntry,
 			updateSettings,
 			entriesForMember
@@ -580,7 +572,6 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			addEntry,
 			addTimeoffBatch,
 			applyReconciliation,
-			updateEntry,
 			removeEntry,
 			updateSettings,
 			entriesForMember
