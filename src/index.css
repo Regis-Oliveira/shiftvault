@@ -112,6 +112,15 @@
 		@apply outline-2 outline-offset-2 outline-ring;
 	}
 
+	/* Tailwind v4 preflight drops the browser-default `cursor: pointer` on buttons. shadcn's
+	   primitives don't add it back, so without this rule the cursor stays as the default text
+	   caret on every Button, native <button>, and role="button" across the app. Disabled
+	   elements opt out so they look unclickable. */
+	button:not(:disabled),
+	[role="button"]:not([aria-disabled="true"]) {
+		cursor: pointer;
+	}
+
 	@media (prefers-reduced-motion: reduce) {
 		*,
 		*::before,
