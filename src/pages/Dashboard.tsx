@@ -9,7 +9,7 @@ import { StatCard } from "@/components/StatCard";
 import { TeamTabs } from "@/components/TeamTabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useShiftVault, useVisibleMembers } from "@/data/DataProvider";
+import { useArchivedMembers, useShiftVault, useVisibleMembers } from "@/data/DataProvider";
 import { formatMinutes, memberBalance } from "@/lib/hours";
 import { pluralize } from "@/lib/pluralize";
 import { matchMembers } from "@/lib/searchMembers";
@@ -17,7 +17,9 @@ import { matchMembers } from "@/lib/searchMembers";
 export function DashboardPage() {
 	const { settings, isLoading, entriesForMember } = useShiftVault();
 	const members = useVisibleMembers();
+	const archived = useArchivedMembers();
 	const [searchQuery, setSearchQuery] = useState("");
+	const [showArchived, setShowArchived] = useState(false);
 	const label = settings.memberLabel;
 	const pluralLabel = pluralize(label);
 	const filteredMembers = matchMembers(searchQuery, members);
@@ -117,6 +119,28 @@ export function DashboardPage() {
 					))}
 				</section>
 			)}
+
+			{archived.length > 0 ? (
+				<section aria-label="Archived members" className="border-border space-y-4 border-t pt-6">
+					<button
+						type="button"
+						onClick={() => setShowArchived((v) => !v)}
+						aria-expanded={showArchived}
+						className="text-muted-foreground hover:text-foreground inline-flex items-center gap-2 text-sm font-medium"
+					>
+						<span>
+							Archived ({archived.length}) {showArchived ? "▾" : "▸"}
+						</span>
+					</button>
+					{showArchived ? (
+						<div className="grid grid-cols-1 gap-4 opacity-70 sm:grid-cols-2 lg:grid-cols-3">
+							{archived.map((member) => (
+								<MemberCard key={member.id} member={member} entries={entriesForMember(member.id)} />
+							))}
+						</div>
+					) : null}
+				</section>
+			) : null}
 		</div>
 	);
 }

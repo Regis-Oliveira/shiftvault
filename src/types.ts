@@ -45,6 +45,12 @@ export interface Member {
 	teamId: string;
 	avatarBase64?: string;
 	createdAt: number;
+	/**
+	 * Soft-delete timestamp. When set, the member is hidden from Dashboard, Calendar,
+	 * Reports, and team-tab counts but their entries remain on disk. Missing on active
+	 * members. Optional → no IDB migration needed.
+	 */
+	archivedAt?: number;
 }
 
 /** One overtime entry the time-off withdrew from. */

@@ -1,5 +1,7 @@
 import { format, parseISO } from "date-fns";
 import {
+	ArchiveIcon,
+	ArchiveRestoreIcon,
 	ArrowLeftIcon,
 	CalendarRangeIcon,
 	ClockIcon,
@@ -13,6 +15,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { EntryFormDialog } from "@/components/EntryFormDialog";
@@ -34,8 +37,16 @@ import type { Entry, Member } from "@/types";
 export function MemberDetailPage() {
 	const { id } = useParams<{ id: string }>();
 	const navigate = useNavigate();
-	const { members, settings, isLoading, entriesForMember, removeMember, removeEntry } =
-		useShiftVault();
+	const {
+		members,
+		settings,
+		isLoading,
+		entriesForMember,
+		removeMember,
+		removeEntry,
+		archiveMember,
+		unarchiveMember
+	} = useShiftVault();
 	const [actionError, setActionError] = useState<string | null>(null);
 
 	if (isLoading) {
@@ -60,7 +71,22 @@ export function MemberDetailPage() {
 	async function handleRemoveMember() {
 		if (!member) return;
 		await removeMember(member.id);
+		toast.success(`${member.name} deleted`);
 		navigate("/");
+	}
+
+	async function handleArchive() {
+		if (!member) return;
+		await archiveMember(member.id);
+		toast.success(`${member.name} archived`, {
+			description: "They're hidden from active views but their history is preserved."
+		});
+	}
+
+	async function handleUnarchive() {
+		if (!member) return;
+		await unarchiveMember(member.id);
+		toast.success(`${member.name} restored`);
 	}
 
 	async function handleDeleteEntry(entryId: string) {
@@ -98,6 +124,22 @@ export function MemberDetailPage() {
 				</div>
 			) : null}
 
+			{member.archivedAt ? (
+				<div
+					role="status"
+					className="border-border bg-muted text-muted-foreground flex flex-wrap items-center justify-between gap-3 rounded-md border px-4 py-3 text-sm"
+				>
+					<span>
+						<strong className="text-foreground">{member.name}</strong> is archived. They're hidden
+						from Dashboard, Calendar, Reports, and team tabs. History is preserved.
+					</span>
+					<Button variant="outline" size="sm" onClick={handleUnarchive}>
+						<ArchiveRestoreIcon aria-hidden="true" />
+						Restore
+					</Button>
+				</div>
+			) : null}
+
 			<header className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
 				<div className="flex items-start gap-4">
 					<Avatar className="size-20">
@@ -127,6 +169,17 @@ export function MemberDetailPage() {
 									</Button>
 								}
 							/>
+							{member.archivedAt ? (
+								<Button variant="outline" size="sm" onClick={handleUnarchive}>
+									<ArchiveRestoreIcon aria-hidden="true" />
+									Restore
+								</Button>
+							) : (
+								<Button variant="outline" size="sm" onClick={handleArchive}>
+									<ArchiveIcon aria-hidden="true" />
+									Archive
+								</Button>
+							)}
 							<ConfirmDialog
 								trigger={
 									<Button
@@ -135,17 +188,18 @@ export function MemberDetailPage() {
 										className="text-destructive hover:bg-destructive/10 hover:text-destructive"
 									>
 										<Trash2Icon aria-hidden="true" />
-										Remove
+										Delete forever
 									</Button>
 								}
-								title={`Remove ${member.name}?`}
+								title={`Delete ${member.name} forever?`}
 								description={
 									<>
-										This will permanently delete <strong>{member.name}</strong> and all{" "}
-										{entries.length} of their entries. This action cannot be undone.
+										This permanently deletes <strong>{member.name}</strong> and all {entries.length}{" "}
+										of their entries. This cannot be undone — prefer <strong>Archive</strong> if you
+										might restore them later.
 									</>
 								}
-								confirmLabel="Remove"
+								confirmLabel="Delete forever"
 								tone="destructive"
 								onConfirm={handleRemoveMember}
 							/>
@@ -270,17 +324,19 @@ function OvertimeColumn({
 				/>
 			) : null}
 
-			<EntryFormDialog
-				member={member}
-				entries={entries}
-				kind="overtime"
-				trigger={
-					<Button variant="outline" size="sm">
-						<PlusIcon aria-hidden="true" />
-						Log overtime
-					</Button>
-				}
-			/>
+			{member.archivedAt ? null : (
+				<EntryFormDialog
+					member={member}
+					entries={entries}
+					kind="overtime"
+					trigger={
+						<Button variant="outline" size="sm">
+							<PlusIcon aria-hidden="true" />
+							Log overtime
+						</Button>
+					}
+				/>
+			)}
 		</Card>
 	);
 }
@@ -331,29 +387,31 @@ function TimeoffColumn({ member, entries, list, overtimeById, onDelete }: Timeof
 				)}
 			</ul>
 
-			<div className="flex flex-wrap gap-2">
-				<EntryFormDialog
-					member={member}
-					entries={entries}
-					kind="timeoff"
-					trigger={
-						<Button variant="outline" size="sm">
-							<MinusIcon aria-hidden="true" />
-							Log time off
-						</Button>
-					}
-				/>
-				<PlanTimeOffDialog
-					member={member}
-					entries={entries}
-					trigger={
-						<Button variant="outline" size="sm">
-							<CalendarRangeIcon aria-hidden="true" />
-							Plan time off
-						</Button>
-					}
-				/>
-			</div>
+			{member.archivedAt ? null : (
+				<div className="flex flex-wrap gap-2">
+					<EntryFormDialog
+						member={member}
+						entries={entries}
+						kind="timeoff"
+						trigger={
+							<Button variant="outline" size="sm">
+								<MinusIcon aria-hidden="true" />
+								Log time off
+							</Button>
+						}
+					/>
+					<PlanTimeOffDialog
+						member={member}
+						entries={entries}
+						trigger={
+							<Button variant="outline" size="sm">
+								<CalendarRangeIcon aria-hidden="true" />
+								Plan time off
+							</Button>
+						}
+					/>
+				</div>
+			)}
 		</Card>
 	);
 }

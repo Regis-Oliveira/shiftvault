@@ -60,6 +60,8 @@ interface DataContextValue {
 	addMember: (member: Member) => Promise<void>;
 	updateMember: (member: Member) => Promise<void>;
 	removeMember: (id: string) => Promise<void>;
+	archiveMember: (id: string) => Promise<void>;
+	unarchiveMember: (id: string) => Promise<void>;
 	addTeam: (team: Team) => Promise<void>;
 	updateTeam: (team: Team) => Promise<void>;
 	removeTeam: (id: string) => Promise<void>;
@@ -162,6 +164,29 @@ export function DataProvider({ children }: { children: ReactNode }) {
 		setMembers((prev) => prev.filter((m) => m.id !== id));
 		setEntries((prev) => prev.filter((e) => e.memberId !== id));
 	}, []);
+
+	const archiveMember = useCallback(
+		async (id: string) => {
+			const member = members.find((m) => m.id === id);
+			if (!member) return;
+			const archived: Member = { ...member, archivedAt: Date.now() };
+			await saveMember(archived);
+			setMembers((prev) => prev.map((m) => (m.id === id ? archived : m)));
+		},
+		[members]
+	);
+
+	const unarchiveMember = useCallback(
+		async (id: string) => {
+			const member = members.find((m) => m.id === id);
+			if (!member) return;
+			const restored: Member = { ...member };
+			delete restored.archivedAt;
+			await saveMember(restored);
+			setMembers((prev) => prev.map((m) => (m.id === id ? restored : m)));
+		},
+		[members]
+	);
 
 	const addTeam = useCallback(async (team: Team) => {
 		await saveTeam(team);
@@ -426,6 +451,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			addMember,
 			updateMember,
 			removeMember,
+			archiveMember,
+			unarchiveMember,
 			addTeam,
 			updateTeam,
 			removeTeam,
@@ -449,6 +476,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			addMember,
 			updateMember,
 			removeMember,
+			archiveMember,
+			unarchiveMember,
 			addTeam,
 			updateTeam,
 			removeTeam,
@@ -483,7 +512,14 @@ export function useShiftVault(): DataContextValue {
 export function useVisibleMembers(): Member[] {
 	const { members, teams, activeTeamId } = useShiftVault();
 	return useMemo(() => {
-		if (activeTeamId === ALL_TEAMS || teams.length <= 1) return members;
-		return members.filter((m) => m.teamId === activeTeamId);
+		const active = members.filter((m) => !m.archivedAt);
+		if (activeTeamId === ALL_TEAMS || teams.length <= 1) return active;
+		return active.filter((m) => m.teamId === activeTeamId);
 	}, [members, teams.length, activeTeamId]);
+}
+
+/** Members that have been archived (soft-deleted). Used by the Dashboard restore section. */
+export function useArchivedMembers(): Member[] {
+	const { members } = useShiftVault();
+	return useMemo(() => members.filter((m) => m.archivedAt), [members]);
 }
