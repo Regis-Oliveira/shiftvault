@@ -45,7 +45,7 @@ export function AppShell() {
 				<main
 					id="main-content"
 					tabIndex={-1}
-					className="flex-1 overflow-y-auto px-4 py-4 outline-none sm:px-6 sm:py-6 lg:px-10 lg:py-8"
+					className="flex-1 overflow-y-auto overscroll-y-contain px-4 py-4 outline-none sm:px-6 sm:py-6 lg:px-10 lg:py-8"
 				>
 					<MobileNav />
 					<Outlet />
