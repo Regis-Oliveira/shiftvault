@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import {
+	appendAuditEvent,
 	commitTimeoffBatchWithConsumption,
 	commitTimeoffDeletionWithRestore,
 	commitTimeoffWithConsumption,
@@ -26,6 +27,7 @@ import {
 	saveMember,
 	saveTeam
 } from "@/lib/db";
+import { formatMinutes } from "@/lib/hours";
 import { newId } from "@/lib/id";
 import {
 	InsufficientHoursError,
@@ -33,7 +35,36 @@ import {
 	planConsumption,
 	planRestoration
 } from "@/lib/settlement";
-import type { AppSettings, Entry, Member, Team, TimeoffReason } from "@/types";
+import type {
+	AppSettings,
+	AuditEvent,
+	AuditEventKind,
+	Entry,
+	Member,
+	Team,
+	TimeoffReason
+} from "@/types";
+
+function audit(
+	kind: AuditEventKind,
+	summary: string,
+	payload?: Record<string, unknown>
+): AuditEvent {
+	return { id: newId(), timestamp: Date.now(), kind, summary, payload };
+}
+
+async function recordAudit(
+	kind: AuditEventKind,
+	summary: string,
+	payload?: Record<string, unknown>
+): Promise<void> {
+	try {
+		await appendAuditEvent(audit(kind, summary, payload));
+	} catch (err) {
+		// Audit writes must never block primary mutations — log and continue.
+		console.error("Failed to record audit event", kind, err);
+	}
+}
 
 export interface TimeoffBatchInput {
 	memberId: string;
@@ -152,18 +183,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
 	const addMember = useCallback(async (member: Member) => {
 		await saveMember(member);
 		setMembers((prev) => [...prev, member]);
+		await recordAudit("member.add", `Added member "${member.name}"`, {
+			memberId: member.id,
+			name: member.name,
+			email: member.email
+		});
 	}, []);
 
 	const updateMember = useCallback(async (member: Member) => {
 		await saveMember(member);
 		setMembers((prev) => prev.map((m) => (m.id === member.id ? member : m)));
+		await recordAudit("member.update", `Updated member "${member.name}"`, {
+			memberId: member.id,
+			name: member.name
+		});
 	}, []);
 
-	const removeMember = useCallback(async (id: string) => {
-		await deleteMember(id);
-		setMembers((prev) => prev.filter((m) => m.id !== id));
-		setEntries((prev) => prev.filter((e) => e.memberId !== id));
-	}, []);
+	const removeMember = useCallback(
+		async (id: string) => {
+			const member = members.find((m) => m.id === id);
+			const entryCount = entries.filter((e) => e.memberId === id).length;
+			await deleteMember(id);
+			setMembers((prev) => prev.filter((m) => m.id !== id));
+			setEntries((prev) => prev.filter((e) => e.memberId !== id));
+			await recordAudit(
+				"member.delete",
+				`Deleted member "${member?.name ?? id}" (${entryCount} entries removed)`,
+				{ memberId: id, name: member?.name, entryCount }
+			);
+		},
+		[members, entries]
+	);
 
 	const archiveMember = useCallback(
 		async (id: string) => {
@@ -172,6 +222,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			const archived: Member = { ...member, archivedAt: Date.now() };
 			await saveMember(archived);
 			setMembers((prev) => prev.map((m) => (m.id === id ? archived : m)));
+			await recordAudit("member.archive", `Archived "${member.name}"`, {
+				memberId: id,
+				name: member.name
+			});
 		},
 		[members]
 	);
@@ -184,6 +238,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			delete restored.archivedAt;
 			await saveMember(restored);
 			setMembers((prev) => prev.map((m) => (m.id === id ? restored : m)));
+			await recordAudit("member.unarchive", `Restored "${member.name}"`, {
+				memberId: id,
+				name: member.name
+			});
 		},
 		[members]
 	);
@@ -225,6 +283,18 @@ export function DataProvider({ children }: { children: ReactNode }) {
 				};
 				await saveEntry(normalised);
 				setEntries((prev) => [normalised, ...prev]);
+				const member = members.find((m) => m.id === entry.memberId);
+				await recordAudit(
+					"entry.add",
+					`${member?.name ?? entry.memberId} logged ${formatMinutes(entry.durationMin)} overtime on ${entry.date}`,
+					{
+						entryId: entry.id,
+						memberId: entry.memberId,
+						kind: "overtime",
+						date: entry.date,
+						durationMin: entry.durationMin
+					}
+				);
 				return;
 			}
 
@@ -246,8 +316,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
 				const next = prev.map((e) => updatedById.get(e.id) ?? e);
 				return [timeoff, ...next];
 			});
+			const member = members.find((m) => m.id === entry.memberId);
+			await recordAudit(
+				"entry.add",
+				`${member?.name ?? entry.memberId} took ${formatMinutes(entry.durationMin)} off on ${entry.date}`,
+				{
+					entryId: entry.id,
+					memberId: entry.memberId,
+					kind: "timeoff",
+					date: entry.date,
+					durationMin: entry.durationMin
+				}
+			);
 		},
-		[entries]
+		[entries, members]
 	);
 
 	const addTimeoffBatch = useCallback(
@@ -401,6 +483,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 		async (id: string) => {
 			const target = entries.find((e) => e.id === id);
 			if (!target) return;
+			const member = members.find((m) => m.id === target.memberId);
 
 			if (target.kind === "overtime") {
 				if (isSettled(target) || (target.consumedMin ?? 0) > 0) {
@@ -408,6 +491,11 @@ export function DataProvider({ children }: { children: ReactNode }) {
 				}
 				await deleteEntry(id);
 				setEntries((prev) => prev.filter((e) => e.id !== id));
+				await recordAudit(
+					"entry.delete",
+					`Removed ${member?.name ?? target.memberId}'s ${formatMinutes(target.durationMin)} overtime on ${target.date}`,
+					{ entryId: id, memberId: target.memberId, kind: "overtime", date: target.date }
+				);
 				return;
 			}
 
@@ -420,8 +508,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			await commitTimeoffDeletionWithRestore(id, restored);
 			const restoredById = new Map(restored.map((ot) => [ot.id, ot]));
 			setEntries((prev) => prev.filter((e) => e.id !== id).map((e) => restoredById.get(e.id) ?? e));
+			await recordAudit(
+				"entry.delete",
+				`Removed ${member?.name ?? target.memberId}'s ${formatMinutes(target.durationMin)} time off on ${target.date}`,
+				{ entryId: id, memberId: target.memberId, kind: "timeoff", date: target.date }
+			);
 		},
-		[entries]
+		[entries, members]
 	);
 
 	const updateSettings = useCallback(
@@ -429,6 +522,9 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			const merged: AppSettings = { ...settings, ...next, id: "app" };
 			await persistSettings(merged);
 			setSettings(merged);
+			await recordAudit("settings.update", "Workspace settings updated", {
+				fields: Object.keys(next)
+			});
 		},
 		[settings]
 	);

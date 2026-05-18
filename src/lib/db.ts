@@ -1,5 +1,5 @@
 import { type IDBPDatabase, openDB } from "idb";
-import type { AppSettings, Entry, Member, Team } from "@/types";
+import type { AppSettings, AuditEvent, Entry, Member, Team } from "@/types";
 
 const DB_NAME = "shiftvault";
 /**
@@ -11,13 +11,17 @@ const DB_NAME = "shiftvault";
  * Version 3 — teams:
  *             - new `teams` store
  *             - members gain `teamId` (legacy migration backfills the auto-created "Default" team)
+ * Version 4 — audit log:
+ *             - new `audit` store with `by-timestamp` index
+ *             - no backfill — audit history starts the moment v4 is reached
  *             No data deleted across any upgrade path.
  */
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 const MEMBERS_STORE = "members";
 const ENTRIES_STORE = "entries";
 const SETTINGS_STORE = "settings";
 const TEAMS_STORE = "teams";
+const AUDIT_STORE = "audit";
 
 const DEFAULT_TEAM_ID = "default-team";
 
@@ -54,6 +58,10 @@ async function getDb(): Promise<IDBPDatabase> {
 				}
 				if (!database.objectStoreNames.contains(TEAMS_STORE)) {
 					database.createObjectStore(TEAMS_STORE, { keyPath: "id" });
+				}
+				if (!database.objectStoreNames.contains(AUDIT_STORE)) {
+					const auditStore = database.createObjectStore(AUDIT_STORE, { keyPath: "id" });
+					auditStore.createIndex("by-timestamp", "timestamp");
 				}
 
 				// v1 → v2: backfill `email` on members and `consumedMin`/`consumptions` on entries.
@@ -278,53 +286,73 @@ export async function saveSettings(settings: AppSettings): Promise<void> {
 	await database.put(SETTINGS_STORE, settings);
 }
 
+// ─── Audit log ───────────────────────────────────────────────────────────────
+
+export async function appendAuditEvent(event: AuditEvent): Promise<void> {
+	const database = await getDb();
+	await database.put(AUDIT_STORE, event);
+}
+
+/** Returns audit events newest-first. Pass `limit` to bound the result for the page. */
+export async function listAuditEvents(limit?: number): Promise<AuditEvent[]> {
+	const database = await getDb();
+	const all: AuditEvent[] = await database.getAll(AUDIT_STORE);
+	all.sort((a, b) => b.timestamp - a.timestamp);
+	return limit === undefined ? all : all.slice(0, limit);
+}
+
 // ─── Bulk export / import ────────────────────────────────────────────────────
 
 export interface ExportPayload {
 	/**
-	 * 1 = original; 2 = adds consumedMin/consumptions + email; 3 = adds teams + Member.teamId.
-	 * importAll auto-upgrades older payloads on read.
+	 * 1 = original; 2 = adds consumedMin/consumptions + email; 3 = adds teams + Member.teamId;
+	 * 4 = adds audit events. importAll auto-upgrades older payloads on read.
 	 */
-	schemaVersion: 1 | 2 | 3;
+	schemaVersion: 1 | 2 | 3 | 4;
 	exportedAt: number;
 	members: Member[];
 	entries: Entry[];
 	settings: AppSettings;
 	/** Present from v3 onward. v1/v2 payloads have this auto-created during import. */
 	teams?: Team[];
+	/** Present from v4 onward. Older payloads import with an empty audit log. */
+	audit?: AuditEvent[];
 }
 
 export async function exportAll(): Promise<ExportPayload> {
-	const [members, entries, settings, teams] = await Promise.all([
+	const [members, entries, settings, teams, audit] = await Promise.all([
 		listMembers(),
 		listEntries(),
 		loadSettings(),
-		listTeams()
+		listTeams(),
+		listAuditEvents()
 	]);
 	return {
-		schemaVersion: 3,
+		schemaVersion: 4,
 		exportedAt: Date.now(),
 		members,
 		entries,
 		settings,
-		teams
+		teams,
+		audit
 	};
 }
 
 export async function importAll(payload: ExportPayload, mode: "replace" | "merge"): Promise<void> {
-	if (![1, 2, 3].includes(payload.schemaVersion)) {
+	if (![1, 2, 3, 4].includes(payload.schemaVersion)) {
 		throw new Error(`Unsupported schema version: ${payload.schemaVersion}`);
 	}
 	const database = await getDb();
 	const tx = database.transaction(
-		[MEMBERS_STORE, ENTRIES_STORE, SETTINGS_STORE, TEAMS_STORE],
+		[MEMBERS_STORE, ENTRIES_STORE, SETTINGS_STORE, TEAMS_STORE, AUDIT_STORE],
 		"readwrite"
 	);
 	if (mode === "replace") {
 		await Promise.all([
 			tx.objectStore(MEMBERS_STORE).clear(),
 			tx.objectStore(ENTRIES_STORE).clear(),
-			tx.objectStore(TEAMS_STORE).clear()
+			tx.objectStore(TEAMS_STORE).clear(),
+			tx.objectStore(AUDIT_STORE).clear()
 		]);
 	}
 	// Upgrade pre-v3 payloads in-place: ensure a Default team exists, then attach it to any
@@ -351,10 +379,12 @@ export async function importAll(payload: ExportPayload, mode: "replace" | "merge
 		consumedMin: e.consumedMin ?? (e.kind === "overtime" ? 0 : undefined),
 		consumptions: e.consumptions ?? (e.kind === "timeoff" ? [] : undefined)
 	}));
+	const auditToWrite = payload.audit ?? [];
 	await Promise.all([
 		...upgradedTeams.map((t) => tx.objectStore(TEAMS_STORE).put(t)),
 		...upgradedMembers.map((m) => tx.objectStore(MEMBERS_STORE).put(m)),
 		...upgradedEntries.map((e) => tx.objectStore(ENTRIES_STORE).put(e)),
+		...auditToWrite.map((e) => tx.objectStore(AUDIT_STORE).put(e)),
 		tx.objectStore(SETTINGS_STORE).put(payload.settings)
 	]);
 	await tx.done;
@@ -363,14 +393,15 @@ export async function importAll(payload: ExportPayload, mode: "replace" | "merge
 export async function wipeAll(): Promise<void> {
 	const database = await getDb();
 	const tx = database.transaction(
-		[MEMBERS_STORE, ENTRIES_STORE, SETTINGS_STORE, TEAMS_STORE],
+		[MEMBERS_STORE, ENTRIES_STORE, SETTINGS_STORE, TEAMS_STORE, AUDIT_STORE],
 		"readwrite"
 	);
 	await Promise.all([
 		tx.objectStore(MEMBERS_STORE).clear(),
 		tx.objectStore(ENTRIES_STORE).clear(),
 		tx.objectStore(SETTINGS_STORE).clear(),
-		tx.objectStore(TEAMS_STORE).clear()
+		tx.objectStore(TEAMS_STORE).clear(),
+		tx.objectStore(AUDIT_STORE).clear()
 	]);
 	await tx.done;
 }

@@ -1,4 +1,5 @@
 import {
+	ActivityIcon,
 	CalendarDaysIcon,
 	FileTextIcon,
 	GitMergeIcon,
@@ -26,6 +27,7 @@ const NAV: NavItem[] = [
 	{ to: "/calendar", label: "Calendar", icon: CalendarDaysIcon },
 	{ to: "/reports", label: "Reports", icon: FileTextIcon },
 	{ to: "/reconcile", label: "Reconcile", icon: GitMergeIcon },
+	{ to: "/audit", label: "Activity", icon: ActivityIcon },
 	{ to: "/settings", label: "Settings", icon: SettingsIcon }
 ];
 

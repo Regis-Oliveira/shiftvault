@@ -124,7 +124,7 @@ describe("db: export / import / wipe", () => {
 		await saveSettings({ ...DEFAULT_SETTINGS, memberLabel: "QA" });
 
 		const payload = await exportAll();
-		expect(payload.schemaVersion).toBe(3);
+		expect(payload.schemaVersion).toBe(4);
 		expect(payload.members).toHaveLength(1);
 		expect(payload.entries).toHaveLength(1);
 		expect(payload.settings.memberLabel).toBe("QA");

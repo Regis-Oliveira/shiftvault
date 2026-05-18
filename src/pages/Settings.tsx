@@ -25,7 +25,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useShiftVault } from "@/data/DataProvider";
-import { type ExportPayload, exportAll, importAll, wipeAll } from "@/lib/db";
+import { appendAuditEvent, type ExportPayload, exportAll, importAll, wipeAll } from "@/lib/db";
+import { newId } from "@/lib/id";
 import { downloadBlob, historyToCsv } from "@/lib/report";
 import type { ThemeMode } from "@/types";
 
@@ -128,7 +129,7 @@ export function SettingsPage() {
 				if (
 					typeof parsed !== "object" ||
 					parsed === null ||
-					(parsed.schemaVersion !== 1 && parsed.schemaVersion !== 2) ||
+					![1, 2, 3, 4].includes(parsed.schemaVersion) ||
 					!Array.isArray(parsed.members) ||
 					!Array.isArray(parsed.entries)
 				) {
@@ -153,6 +154,20 @@ export function SettingsPage() {
 		setPendingImport(null);
 		try {
 			await importAll(payload, strategy);
+			await appendAuditEvent({
+				id: newId(),
+				timestamp: Date.now(),
+				kind: strategy === "replace" ? "import.replace" : "import.merge",
+				summary:
+					strategy === "replace"
+						? `Replaced workspace from backup (${payload.members.length} members, ${payload.entries.length} entries)`
+						: `Merged backup into workspace (${payload.members.length} members, ${payload.entries.length} entries)`,
+				payload: {
+					schemaVersion: payload.schemaVersion,
+					memberCount: payload.members.length,
+					entryCount: payload.entries.length
+				}
+			});
 			await refresh();
 			toast.success(
 				strategy === "replace" ? "Workspace replaced from backup" : "Backup merged into workspace",
@@ -169,7 +184,18 @@ export function SettingsPage() {
 
 	async function handleWipe() {
 		try {
+			const memberCount = members.length;
+			const entryCount = entries.length;
 			await wipeAll();
+			// Re-seed the cleared audit log with a record that the wipe happened, so the user can
+			// always tell whether the empty workspace came from a fresh install or a hard reset.
+			await appendAuditEvent({
+				id: newId(),
+				timestamp: Date.now(),
+				kind: "wipe",
+				summary: `Wiped workspace (${memberCount} members, ${entryCount} entries removed)`,
+				payload: { memberCount, entryCount }
+			});
 			await refresh();
 			toast.success("Workspace wiped");
 			navigate("/");

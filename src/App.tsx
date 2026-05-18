@@ -20,6 +20,7 @@ const ReportsPage = lazy(() => import("@/pages/Reports").then((m) => ({ default:
 const ReconcilePage = lazy(() =>
 	import("@/pages/Reconcile").then((m) => ({ default: m.ReconcilePage }))
 );
+const AuditPage = lazy(() => import("@/pages/Audit").then((m) => ({ default: m.AuditPage })));
 const SettingsPage = lazy(() =>
 	import("@/pages/Settings").then((m) => ({ default: m.SettingsPage }))
 );
@@ -85,6 +86,14 @@ export default function App() {
 									element={
 										<Suspense fallback={<PageFallback />}>
 											<ReconcilePage />
+										</Suspense>
+									}
+								/>
+								<Route
+									path="audit"
+									element={
+										<Suspense fallback={<PageFallback />}>
+											<AuditPage />
 										</Suspense>
 									}
 								/>

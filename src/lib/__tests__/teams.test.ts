@@ -92,7 +92,7 @@ describe("export / import with teams", () => {
 		await saveTeam(team({ id: "qa", name: "QA" }));
 		await saveMember(member({ teamId: "qa" }));
 		const payload = await exportAll();
-		expect(payload.schemaVersion).toBe(3);
+		expect(payload.schemaVersion).toBe(4);
 		expect(payload.teams?.map((t) => t.id)).toEqual(["qa"]);
 	});
 

@@ -89,6 +89,35 @@ export interface Entry {
 	timeoffReason?: TimeoffReason;
 }
 
+/**
+ * The set of audit-event kinds the app emits. Append-only — old kinds must stay valid so
+ * historic events keep deserializing after upgrades. Free-text `summary` on each event
+ * carries the human-readable description.
+ */
+export type AuditEventKind =
+	| "member.add"
+	| "member.update"
+	| "member.delete"
+	| "member.archive"
+	| "member.unarchive"
+	| "entry.add"
+	| "entry.update"
+	| "entry.delete"
+	| "timeoff.batch"
+	| "settings.update"
+	| "import.merge"
+	| "import.replace"
+	| "wipe";
+
+export interface AuditEvent {
+	id: string;
+	timestamp: number;
+	kind: AuditEventKind;
+	summary: string;
+	/** Optional structured detail. Shape varies by `kind`. */
+	payload?: Record<string, unknown>;
+}
+
 export interface AppSettings {
 	id: "app";
 	themeMode: ThemeMode;
