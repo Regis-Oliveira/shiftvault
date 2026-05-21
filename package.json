@@ -10,7 +10,12 @@
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
 		"test": "vitest",
-		"test:run": "vitest run"
+		"test:run": "vitest run",
+		"typecheck": "tsc -b",
+		"prepare": "simple-git-hooks"
+	},
+	"simple-git-hooks": {
+		"pre-push": "npm run typecheck"
 	},
 	"dependencies": {
 		"@hookform/resolvers": "^5.2.2",
@@ -43,6 +48,7 @@
 		"@vitejs/plugin-react": "^6.0.1",
 		"fake-indexeddb": "^6.2.5",
 		"jsdom": "^29.1.1",
+		"simple-git-hooks": "^2.13.1",
 		"typescript": "~6.0.2",
 		"vite": "^8.0.12",
 		"vitest": "^4.1.6"

@@ -69,8 +69,8 @@ function todayIso(): string {
 export function EntryFormDialog(props: Props) {
 	const mode: Mode = props.mode === "edit" ? "edit" : "create";
 	const { member, entries, trigger } = props;
-	const kind: EntryKind = mode === "edit" ? props.entry.kind : props.kind;
-	const editingEntry = mode === "edit" ? props.entry : null;
+	const kind: EntryKind = props.mode === "edit" ? props.entry.kind : props.kind;
+	const editingEntry = props.mode === "edit" ? props.entry : null;
 
 	const [open, setOpen] = useState(false);
 	const { addEntry, updateEntry, settings } = useShiftVault();
