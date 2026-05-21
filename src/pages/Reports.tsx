@@ -33,6 +33,7 @@ import {
 import { ALL_TEAMS, useShiftVault, useVisibleMembers } from "@/data/DataProvider";
 import { initialsFromName } from "@/lib/avatar";
 import { DATE_FULL } from "@/lib/dateFormat";
+import { getTaskUrls } from "@/lib/entries";
 import { formatMinutes } from "@/lib/hours";
 import type { MemberReport, ReportPayload } from "@/lib/report";
 import {
@@ -522,17 +523,30 @@ function EntryColumn({
 									{formatMinutes(entry.durationMin)}
 								</Badge>
 							</div>
-							{entry.taskUrl ? (
-								<a
-									href={entry.taskUrl}
-									target="_blank"
-									rel="noreferrer noopener"
-									className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate text-xs underline-offset-2 hover:underline print:no-underline"
-								>
-									<ExternalLinkIcon aria-hidden="true" className="size-3 shrink-0 print:hidden" />
-									<span className="truncate">{entry.taskUrl}</span>
-								</a>
-							) : null}
+							{(() => {
+								const urls = getTaskUrls(entry);
+								if (urls.length === 0) return null;
+								return (
+									<ul className="flex flex-col gap-1">
+										{urls.map((url, idx) => (
+											<li key={`${url}-${idx}`}>
+												<a
+													href={url}
+													target="_blank"
+													rel="noreferrer noopener"
+													className="text-muted-foreground hover:text-foreground inline-flex max-w-full items-center gap-1 text-xs underline-offset-2 hover:underline print:no-underline"
+												>
+													<ExternalLinkIcon
+														aria-hidden="true"
+														className="size-3 shrink-0 print:hidden"
+													/>
+													<span className="truncate">{url}</span>
+												</a>
+											</li>
+										))}
+									</ul>
+								);
+							})()}
 							{entry.note ? <p className="text-muted-foreground text-xs">{entry.note}</p> : null}
 						</li>
 					))}

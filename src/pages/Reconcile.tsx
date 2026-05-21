@@ -24,6 +24,7 @@ import { useShiftVault } from "@/data/DataProvider";
 import { initialsFromName } from "@/lib/avatar";
 import { DATE_FULL } from "@/lib/dateFormat";
 import type { ExportPayload } from "@/lib/db";
+import { getTaskUrls } from "@/lib/entries";
 import { formatMinutes } from "@/lib/hours";
 import {
 	buildReconciliation,
@@ -461,9 +462,19 @@ function EntryDiffRow({ diff, checked, onToggle }: EntryDiffRowProps) {
 							{formatMinutes(imported.durationMin)}
 						</Badge>
 					</div>
-					{imported.taskUrl ? (
-						<p className="text-muted-foreground truncate text-xs">{imported.taskUrl}</p>
-					) : null}
+					{(() => {
+						const urls = getTaskUrls(imported);
+						if (urls.length === 0) return null;
+						return (
+							<ul className="text-muted-foreground flex flex-col gap-0.5 text-xs">
+								{urls.map((url, idx) => (
+									<li key={`${url}-${idx}`} className="truncate">
+										{url}
+									</li>
+								))}
+							</ul>
+						);
+					})()}
 					{imported.note ? <p className="text-muted-foreground text-xs">{imported.note}</p> : null}
 					{status === "conflict" && localMatch ? (
 						<p className="text-warning-foreground inline-flex items-center gap-1 text-[11px]">

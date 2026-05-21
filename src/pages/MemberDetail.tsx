@@ -29,6 +29,7 @@ import { Card } from "@/components/ui/card";
 import { useShiftVault } from "@/data/DataProvider";
 import { initialsFromName } from "@/lib/avatar";
 import { DATE_FULL, DATE_MEDIUM, DATE_SHORT } from "@/lib/dateFormat";
+import { getTaskUrls } from "@/lib/entries";
 import { formatMinutes, memberBalance, totalOvertime, totalTimeOff } from "@/lib/hours";
 import { availableMin, isSettled, openOvertimeMin, settledOvertimeMin } from "@/lib/settlement";
 import { cn } from "@/lib/utils";
@@ -472,11 +473,14 @@ interface OvertimeRowProps {
 }
 
 function OvertimeRow({ entry, tone, isPartiallySettled, timeoffById, onDelete }: OvertimeRowProps) {
+	const { entries: allEntries, members } = useShiftVault();
+	const member = members.find((m) => m.id === entry.memberId);
 	const date = parseISO(entry.date);
 	const dateLabel = format(date, DATE_FULL);
 	const fullySettled = isSettled(entry);
 	const available = availableMin(entry);
 	const consumed = entry.consumedMin ?? 0;
+	const taskUrls = getTaskUrls(entry);
 
 	// Find which time-off entries consumed this OT (look up by reverse).
 	const settledBy: Entry[] = [];
@@ -515,6 +519,25 @@ function OvertimeRow({ entry, tone, isPartiallySettled, timeoffById, onDelete }:
 							{formatMinutes(entry.durationMin)}
 						</Badge>
 					)}
+					{member && !member.archivedAt ? (
+						<EntryFormDialog
+							mode="edit"
+							member={member}
+							entries={allEntries}
+							entry={entry}
+							trigger={
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									aria-label={`Edit entry from ${dateLabel}`}
+									className="text-muted-foreground hover:text-foreground size-7"
+								>
+									<PencilIcon className="size-3.5" />
+								</Button>
+							}
+						/>
+					) : null}
 					{fullySettled || consumed > 0 ? null : (
 						<ConfirmDialog
 							trigger={
@@ -542,16 +565,22 @@ function OvertimeRow({ entry, tone, isPartiallySettled, timeoffById, onDelete }:
 					)}
 				</div>
 			</div>
-			{entry.taskUrl ? (
-				<a
-					href={entry.taskUrl}
-					target="_blank"
-					rel="noreferrer noopener"
-					className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate text-xs underline-offset-2 hover:underline"
-				>
-					<ExternalLinkIcon aria-hidden="true" className="size-3 shrink-0" />
-					<span className="truncate">{entry.taskUrl}</span>
-				</a>
+			{taskUrls.length > 0 ? (
+				<ul className="flex flex-col gap-1">
+					{taskUrls.map((url, idx) => (
+						<li key={`${url}-${idx}`}>
+							<a
+								href={url}
+								target="_blank"
+								rel="noreferrer noopener"
+								className="text-muted-foreground hover:text-foreground inline-flex max-w-full items-center gap-1 text-xs underline-offset-2 hover:underline"
+							>
+								<ExternalLinkIcon aria-hidden="true" className="size-3 shrink-0" />
+								<span className="truncate">{url}</span>
+							</a>
+						</li>
+					))}
+				</ul>
 			) : null}
 			{entry.note ? <p className="text-muted-foreground text-xs">{entry.note}</p> : null}
 			{settledBy.length > 0 ? (
@@ -571,6 +600,8 @@ interface TimeoffRowProps {
 }
 
 function TimeoffRow({ entry, overtimeById, onDelete }: TimeoffRowProps) {
+	const { entries: allEntries, members } = useShiftVault();
+	const member = members.find((m) => m.id === entry.memberId);
 	const date = parseISO(entry.date);
 	const dateLabel = format(date, DATE_FULL);
 	const consumptions = entry.consumptions ?? [];
@@ -586,6 +617,25 @@ function TimeoffRow({ entry, overtimeById, onDelete }: TimeoffRowProps) {
 					<Badge variant="warning" className="font-mono text-[11px]">
 						{formatMinutes(entry.durationMin)}
 					</Badge>
+					{member && !member.archivedAt ? (
+						<EntryFormDialog
+							mode="edit"
+							member={member}
+							entries={allEntries}
+							entry={entry}
+							trigger={
+								<Button
+									type="button"
+									variant="ghost"
+									size="icon"
+									aria-label={`Edit entry from ${dateLabel}`}
+									className="text-muted-foreground hover:text-foreground size-7"
+								>
+									<PencilIcon className="size-3.5" />
+								</Button>
+							}
+						/>
+					) : null}
 					<ConfirmDialog
 						trigger={
 							<Button

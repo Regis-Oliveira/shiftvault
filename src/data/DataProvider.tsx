@@ -97,6 +97,7 @@ interface DataContextValue {
 	updateTeam: (team: Team) => Promise<void>;
 	removeTeam: (id: string) => Promise<void>;
 	addEntry: (entry: Entry) => Promise<void>;
+	updateEntry: (entry: Entry) => Promise<void>;
 	addTimeoffBatch: (input: TimeoffBatchInput) => Promise<void>;
 	applyReconciliation: (entries: Entry[]) => Promise<{ imported: number; settledTimeoffs: number }>;
 	removeEntry: (id: string) => Promise<void>;
@@ -349,6 +350,83 @@ export function DataProvider({ children }: { children: ReactNode }) {
 		[entries, members]
 	);
 
+	const updateEntry = useCallback(
+		async (next: Entry) => {
+			const prevEntry = entries.find((e) => e.id === next.id);
+			if (!prevEntry) {
+				throw new Error("Cannot update an entry that no longer exists.");
+			}
+			if (prevEntry.memberId !== next.memberId || prevEntry.kind !== next.kind) {
+				throw new Error("Member and kind can't be changed once an entry is created.");
+			}
+
+			const dateChanged = prevEntry.date !== next.date;
+			const durationChanged = prevEntry.durationMin !== next.durationMin;
+
+			// Safety rails: once an entry has settlement state we can't safely re-do FIFO
+			// math through an edit. Block date/duration changes and force the user to
+			// delete + recreate (or undo the settlement first).
+			if (prevEntry.kind === "overtime" && (prevEntry.consumedMin ?? 0) > 0) {
+				if (dateChanged || durationChanged) {
+					throw new Error(
+						"This overtime has already been paid out — date and duration are locked. Delete the time-off that consumed it first, or just edit the link/note."
+					);
+				}
+			}
+			if (prevEntry.kind === "timeoff" && (prevEntry.consumptions?.length ?? 0) > 0) {
+				if (dateChanged || durationChanged) {
+					throw new Error(
+						"This time off has already been settled against banked overtime — date and duration are locked. Delete and recreate it if you need to change them."
+					);
+				}
+			}
+
+			// Overtime duration increase still needs to respect the workspace cap.
+			if (prevEntry.kind === "overtime" && durationChanged) {
+				const memberEntries = entries.filter((e) => e.memberId === next.memberId);
+				const balanceWithoutThis = memberEntries.reduce((sum, e) => {
+					if (e.id === prevEntry.id) return sum;
+					return sum + (e.kind === "overtime" ? e.durationMin : -e.durationMin);
+				}, 0);
+				const projected = balanceWithoutThis + next.durationMin;
+				if (projected > settings.maxBalanceMin) {
+					throw new Error(
+						`Updating to ${formatMinutes(next.durationMin)} would push the balance to ${formatMinutes(projected)} — over the ${formatMinutes(settings.maxBalanceMin)} cap.`
+					);
+				}
+			}
+
+			// Preserve settlement bookkeeping that's not exposed in the edit form.
+			const merged: Entry = {
+				...next,
+				createdAt: prevEntry.createdAt,
+				consumedMin: prevEntry.kind === "overtime" ? prevEntry.consumedMin : undefined,
+				consumptions: prevEntry.kind === "timeoff" ? prevEntry.consumptions : undefined,
+				// Once the user has saved through the new form, the legacy single field is gone.
+				taskUrl: prevEntry.kind === "overtime" ? undefined : prevEntry.taskUrl
+			};
+
+			await saveEntry(merged);
+			setEntries((prev) => prev.map((e) => (e.id === merged.id ? merged : e)));
+
+			const member = members.find((m) => m.id === merged.memberId);
+			await recordAudit(
+				"entry.update",
+				`Updated ${member?.name ?? merged.memberId}'s ${formatMinutes(merged.durationMin)} ${
+					merged.kind === "overtime" ? "overtime" : "time off"
+				} on ${merged.date}`,
+				{
+					entryId: merged.id,
+					memberId: merged.memberId,
+					kind: merged.kind,
+					date: merged.date,
+					durationMin: merged.durationMin
+				}
+			);
+		},
+		[entries, members, settings.maxBalanceMin]
+	);
+
 	const addTimeoffBatch = useCallback(
 		async (input: TimeoffBatchInput) => {
 			if (input.dates.length === 0) return;
@@ -564,7 +642,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
 	);
 
 	const entriesForMember = useCallback(
-		(memberId: string) => entries.filter((e) => e.memberId === memberId),
+		(memberId: string) =>
+			entries
+				.filter((e) => e.memberId === memberId)
+				.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0)),
 		[entries]
 	);
 
@@ -587,6 +668,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			updateTeam,
 			removeTeam,
 			addEntry,
+			updateEntry,
 			addTimeoffBatch,
 			applyReconciliation,
 			removeEntry,
@@ -611,6 +693,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 			updateTeam,
 			removeTeam,
 			addEntry,
+			updateEntry,
 			addTimeoffBatch,
 			applyReconciliation,
 			removeEntry,

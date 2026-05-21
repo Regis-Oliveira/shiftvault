@@ -25,3 +25,13 @@ export function entriesInRange(entries: Entry[], start: Date, end: Date): Entry[
 	const endIso = toIsoDate(end);
 	return entries.filter((e) => e.date >= startIso && e.date <= endIso);
 }
+
+/**
+ * Resolve the task URLs on an entry. Prefers the canonical `taskUrls` array; falls
+ * back to the legacy single `taskUrl` for v1 records. Always returns a fresh array.
+ */
+export function getTaskUrls(entry: Entry): string[] {
+	if (entry.taskUrls && entry.taskUrls.length > 0) return [...entry.taskUrls];
+	if (entry.taskUrl) return [entry.taskUrl];
+	return [];
+}

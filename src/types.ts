@@ -66,8 +66,18 @@ export interface Entry {
 	/** ISO date string (YYYY-MM-DD) representing the day the work or time-off happened. */
 	date: string;
 	durationMin: number;
-	/** Required for overtime entries; ignored for timeoff. */
+	/**
+	 * Legacy single-link field. New writes go to `taskUrls`; readers should resolve via
+	 * `getTaskUrls(entry)` which falls back to this field when the array is missing.
+	 * Kept for backward compat with v1 records — no IDB migration needed.
+	 */
 	taskUrl?: string;
+	/**
+	 * Required for overtime entries; ignored for timeoff. At least one URL when present.
+	 * Newer canonical field — replaces single `taskUrl`. Readers must merge with the
+	 * legacy field via `getTaskUrls(entry)`.
+	 */
+	taskUrls?: string[];
 	note?: string;
 	createdAt: number;
 	/**

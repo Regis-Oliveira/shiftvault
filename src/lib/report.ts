@@ -1,6 +1,6 @@
 import { endOfMonth, format, parseISO, startOfMonth } from "date-fns";
 
-import { entriesInRange } from "@/lib/entries";
+import { entriesInRange, getTaskUrls } from "@/lib/entries";
 import { memberBalance, totalOvertime, totalTimeOff } from "@/lib/hours";
 import { normaliseTimeoffReason } from "@/lib/timeoffReason";
 import type { AppSettings, Entry, Member, TimeoffReason } from "@/types";
@@ -221,7 +221,7 @@ export function toCsv(payload: ReportPayload): string {
 					csvCell(entry.date),
 					csvCell(entry.durationMin),
 					csvCell(duration),
-					csvCell(entry.taskUrl ?? ""),
+					csvCell(getTaskUrls(entry).join(" | ")),
 					csvCell(entry.kind === "timeoff" ? normaliseTimeoffReason(entry.timeoffReason) : ""),
 					csvCell(entry.note ?? "")
 				].join(",")
@@ -288,7 +288,7 @@ export function historyToCsv(workspaceName: string, members: Member[], entries: 
 				csvCell(entry.durationMin),
 				csvCell(duration),
 				csvCell(entry.consumedMin ?? 0),
-				csvCell(entry.taskUrl ?? ""),
+				csvCell(getTaskUrls(entry).join(" | ")),
 				csvCell(entry.kind === "timeoff" ? normaliseTimeoffReason(entry.timeoffReason) : ""),
 				csvCell(entry.note ?? ""),
 				csvCell(new Date(entry.createdAt).toISOString())

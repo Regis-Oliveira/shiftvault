@@ -32,7 +32,7 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useShiftVault, useVisibleMembers } from "@/data/DataProvider";
 import { initialsFromName } from "@/lib/avatar";
 import { DATE_MEDIUM, DATE_SHORT, MONTH_YEAR, WEEKDAY_FULL } from "@/lib/dateFormat";
-import { entriesInRange, groupEntriesByDate, toIsoDate } from "@/lib/entries";
+import { entriesInRange, getTaskUrls, groupEntriesByDate, toIsoDate } from "@/lib/entries";
 import { formatMinutes } from "@/lib/hours";
 import { cn } from "@/lib/utils";
 import type { Entry, Member } from "@/types";
@@ -501,17 +501,27 @@ function CalendarEntryRow({
 					</Badge>
 				</div>
 			</div>
-			{entry.taskUrl ? (
-				<a
-					href={entry.taskUrl}
-					target="_blank"
-					rel="noreferrer noopener"
-					className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1 truncate text-xs underline-offset-2 hover:underline"
-				>
-					<ExternalLinkIcon aria-hidden="true" className="size-3 shrink-0" />
-					<span className="truncate">{entry.taskUrl}</span>
-				</a>
-			) : null}
+			{(() => {
+				const urls = getTaskUrls(entry);
+				if (urls.length === 0) return null;
+				return (
+					<ul className="flex flex-col gap-1">
+						{urls.map((url, idx) => (
+							<li key={`${url}-${idx}`}>
+								<a
+									href={url}
+									target="_blank"
+									rel="noreferrer noopener"
+									className="text-muted-foreground hover:text-foreground inline-flex max-w-full items-center gap-1 text-xs underline-offset-2 hover:underline"
+								>
+									<ExternalLinkIcon aria-hidden="true" className="size-3 shrink-0" />
+									<span className="truncate">{url}</span>
+								</a>
+							</li>
+						))}
+					</ul>
+				);
+			})()}
 			{entry.note ? <p className="text-muted-foreground text-xs">{entry.note}</p> : null}
 		</li>
 	);
